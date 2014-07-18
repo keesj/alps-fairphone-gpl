@@ -888,6 +888,9 @@ priv_set_int (
 #if CFG_ENABLE_WIFI_DIRECT
     case PRIV_CMD_P2P_MODE:
         {
+            extern BOOLEAN fgIsResetting;
+            extern BOOLEAN g_u4HaltFlag;
+
             PARAM_CUSTOM_P2P_SET_STRUC_T rSetP2P;
             WLAN_STATUS rWlanStatus = WLAN_STATUS_SUCCESS;
 
@@ -897,6 +900,8 @@ priv_set_int (
             if(!rSetP2P.u4Enable) {
                 p2pNetUnregister(prGlueInfo, TRUE);
             }
+    		if ((!rSetP2P.u4Enable) && (g_u4HaltFlag == 0) && (fgIsResetting == FALSE))
+                p2pEalySuspendReg(prGlueInfo, rSetP2P.u4Enable); /* p2p remove */
 
             rWlanStatus = kalIoctl(prGlueInfo,
                                 wlanoidSetP2pMode,
@@ -907,6 +912,8 @@ priv_set_int (
                                 TRUE,
                                 FALSE,
                                 &u4BufLen);
+            if ((rSetP2P.u4Enable) && (g_u4HaltFlag == 0) && (fgIsResetting == FALSE))
+                p2pEalySuspendReg(prGlueInfo, rSetP2P.u4Enable); /* p2p on */
 
             if(rSetP2P.u4Enable) {
                 p2pNetRegister(prGlueInfo, TRUE);

@@ -62,6 +62,7 @@
 #define MPU3000_AXES_NUM        3
 #define MPU3000_DATA_LEN        6   
 #define MPU3000_DEV_NAME        "MPU3000"
+static void mpu3000_late_resume(struct early_suspend *h);
 /*----------------------------------------------------------------------------*/
 static const struct i2c_device_id mpu3000_i2c_id[] = {{MPU3000_DEV_NAME,0},{}};
 static struct i2c_board_info __initdata i2c_mpu3000={ I2C_BOARD_INFO("MPU3000", (0xD0>>1))};
@@ -71,6 +72,8 @@ static struct i2c_board_info __initdata i2c_mpu3000={ I2C_BOARD_INFO("MPU3000", 
 //static struct i2c_client_address_data mpu3000_addr_data = { .forces = mpu3000_forces,};
 
 int packet_thresh = 75; // 600 ms / 8ms/sample
+
+static int first_suspend_flag = 0; //ghong hhongyan 20131113
 
 /*----------------------------------------------------------------------------*/
 static int mpu3000_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id); 
@@ -1426,15 +1429,68 @@ static void mpu3000_early_suspend(struct early_suspend *h)
 
 	databuf[0] = MPU3000_REG_PWR_CTL;    
 	databuf[1] = MPU3000_SLEEP;
+	int try=3;
+	while (try > 0)
+	{
+		
 	err = i2c_master_send(obj->client, databuf, 0x2);
 	if(err <= 0)
 	{
+		try--;
+	}
+	else break;
+	
+	}
+	err = i2c_master_send(obj->client, &databuf[0], 0x1);
+	if(err <= 0)
+	{
+		GYRO_ERR("i2c_master_send fail!!\n");
+	}
+	err = i2c_master_recv(obj->client, &databuf[1], 0x1);
+	if(err <= 0)
+	{
+		GYRO_ERR("i2c_master_receive fail!!\n");
+	}
+	//printk("ghong hhongyan check mpu3050 write sleep reg,read buffer=%x\n",databuf[1]);
+	sensor_power = false;
+	
+	MPU3000_power(obj->hw, 0);
+    if(first_suspend_flag == 0)		//ghong hhongyan 20131113 for suspend_current
+    {	//printk("ghong hhongyan test resume twice for leakage!\n");//suspend twice
+	//second resume
+	 mpu3000_late_resume(h);
+	//second suspend
+	atomic_set(&obj->suspend, 1);
+	err = MPU3000_SetPowerMode(obj->client, false);
+	if(err)
+	{
+		GYRO_ERR("write power control fail!!\n");
 		return;
+	}
+
+	databuf[0] = MPU3000_REG_PWR_CTL;    
+	databuf[1] = MPU3000_SLEEP;
+	try=3;
+	while (try > 0)
+	{
+		
+	err = i2c_master_send(obj->client, databuf, 0x2);
+	//printk("ghong hhongyan 20131101 mpu3050c suspend err=%d\n",err);	
+	if(err <= 0)
+	{
+		try--;
+	}
+	else break;
+	
 	}
 
 	sensor_power = false;
 	
 	MPU3000_power(obj->hw, 0);
+	first_suspend_flag = 1;
+    }
+
+	
 }
 /*----------------------------------------------------------------------------*/
 static void mpu3000_late_resume(struct early_suspend *h)
@@ -1551,6 +1607,58 @@ static int mpu3000_i2c_probe(struct i2c_client *client, const struct i2c_device_
 	obj->early_drv.resume   = mpu3000_late_resume,    
 	register_early_suspend(&obj->early_drv);
 #endif 
+/*******************************************************************/
+//suspend
+	u8 databuf[2];
+	atomic_set(&obj->suspend, 1);
+	err = MPU3000_SetPowerMode(new_client, false);
+	if(err)
+	{
+		GYRO_ERR("write power control fail!!\n");
+		return;
+	}
+
+	databuf[0] = MPU3000_REG_PWR_CTL;    
+	databuf[1] = MPU3000_SLEEP;
+	int try=3;
+	while (try > 0)
+	{
+		
+	err = i2c_master_send(new_client, databuf, 0x2);
+	printk("ghong hhongyan 20131101 mpu3050c suspend err=%d\n",err);	
+	if(err <= 0)
+	{
+		try--;
+	}
+	else break;
+	
+	}
+	err = i2c_master_send(new_client, &databuf[0], 0x1);
+	if(err <= 0)
+	{
+		GYRO_ERR("i2c_master_send fail!!\n");
+	}
+	err = i2c_master_recv(new_client, &databuf[1], 0x1);
+	if(err <= 0)
+	{
+		GYRO_ERR("i2c_master_receive fail!!\n");
+	}
+	printk("ghong hhongyan check mpu3050 write sleep reg,read buffer=%x\n",databuf[1]);
+	sensor_power = false;
+	
+	MPU3000_power(obj->hw, 0);
+
+	mdelay(200);
+//resume
+	MPU3000_power(obj->hw, 1);
+	err = mpu3000_init_client(new_client, false);
+	if(err)
+	{
+		GYRO_ERR("initialize client fail! err code %d!\n", err);
+		return;        
+	}
+	atomic_set(&obj->suspend, 0);   
+/***************************************************************************/
 
 	GYRO_LOG("%s: OK\n", __func__);    
 	return 0;

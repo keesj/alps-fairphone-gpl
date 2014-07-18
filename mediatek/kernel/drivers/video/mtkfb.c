@@ -16,7 +16,7 @@
 #include <linux/xlog.h>
 #include <linux/mutex.h>
 #include <linux/leds-mt65xx.h>
-
+#include <linux/delay.h> //ghong tyang
 #include <asm/uaccess.h>
 #include <asm/atomic.h>
 #include <asm/mach-types.h>
@@ -3784,6 +3784,9 @@ static void mtkfb_early_suspend(struct early_suspend *h)
     mutex_lock(&ScreenCaptureMutex);
 
     mt65xx_leds_brightness_set(MT65XX_LED_TYPE_LCD, LED_OFF);
+
+    mdelay(150);//add for power key shut screen
+
     if (down_interruptible(&sem_early_suspend)) {
         printk("[FB Driver] can't get semaphore in mtkfb_early_suspend()\n");
         mutex_unlock(&ScreenCaptureMutex);
@@ -3927,7 +3930,7 @@ static void mtkfb_late_resume(struct early_suspend *h)
 	sem_early_suspend_cnt++;
     up(&sem_early_suspend);
     mutex_unlock(&ScreenCaptureMutex);
-
+    mdelay(100); //tyang
 	if(BL_set_level_resume){
 		mtkfb_set_backlight_level(BL_level);
 		BL_set_level_resume = FALSE;

@@ -556,6 +556,10 @@ typedef struct
     void (*suspend)(void);
     void (*resume)(void);
 
+    // for power-on sequence refinement    
+    void (*suspend_power)(void);
+    void (*resume_power)(void);
+
     void (*update)(unsigned int x, unsigned int y,
                    unsigned int width, unsigned int height);
 	unsigned int (*compare_id)(void);

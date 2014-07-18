@@ -133,6 +133,7 @@ static bool mt_cpufreq_ptpod_disable = false;
 static bool mt_cpufreq_ptpod_voltage_down = false;
 static bool mt_cpufreq_max_freq_overdrive = false;
 static bool mt_cpufreq_limit_max_freq_early_suspend = false;
+static bool mt_cpufreq_freq_table_allocated = false;
 
 /* pmic volt by PTP-OD */
 static unsigned int mt_cpufreq_pmic_volt[8] = {0};
@@ -623,22 +624,27 @@ static int mt_setup_freqs_table(struct cpufreq_policy *policy, struct mt_cpu_fre
     struct cpufreq_frequency_table *table;
     int i, ret;
 
-    table = kzalloc((num + 1) * sizeof(*table), GFP_KERNEL);
-    if (table == NULL)
-        return -ENOMEM;
+    if(mt_cpufreq_freq_table_allocated == false)
+    {
+        table = kzalloc((num + 1) * sizeof(*table), GFP_KERNEL);
+        if (table == NULL)
+            return -ENOMEM;
 
-    for (i = 0; i < num; i++) {
-        table[i].index = i;
-        table[i].frequency = freqs[i].cpufreq_khz;
+        for (i = 0; i < num; i++) {
+            table[i].index = i;
+            table[i].frequency = freqs[i].cpufreq_khz;
+        }
+        table[num].frequency = i;
+        table[num].frequency = CPUFREQ_TABLE_END;
+
+        mt_cpu_freqs = freqs;
+        mt_cpu_freqs_num = num;
+        mt_cpu_freqs_table = table;
+	
+        mt_cpufreq_freq_table_allocated = true;
     }
-    table[num].frequency = i;
-    table[num].frequency = CPUFREQ_TABLE_END;
 
-    mt_cpu_freqs = freqs;
-    mt_cpu_freqs_num = num;
-    mt_cpu_freqs_table = table;
-
-    ret = cpufreq_frequency_table_cpuinfo(policy, table);
+    ret = cpufreq_frequency_table_cpuinfo(policy, mt_cpu_freqs_table);
     if (!ret)
         cpufreq_frequency_table_get_attr(mt_cpu_freqs_table, policy->cpu);
 

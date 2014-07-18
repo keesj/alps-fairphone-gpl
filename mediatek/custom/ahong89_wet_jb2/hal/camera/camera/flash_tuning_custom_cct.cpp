@@ -70,7 +70,7 @@ int getDefaultStrobeNVRam(int sensorType, void* data, int* ret_size)
 	p->tuningPara[1].antiExpLevel = -5;
 	p->tuningPara[1].antiStrobeLevel = -10;
 	p->tuningPara[1].antiUnderLevel = -2;
-	p->tuningPara[1].antiOverLevel = 2;
+	p->tuningPara[1].antiOverLevel = -2;//2 modify here
 	p->tuningPara[1].foregroundLevel = 1;
 	p->tuningPara[1].isRefAfDistance = 0;
 	p->tuningPara[1].accuracyLevel = -10;

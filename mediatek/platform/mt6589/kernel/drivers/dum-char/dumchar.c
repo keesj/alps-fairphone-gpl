@@ -1400,7 +1400,7 @@ static long dumchar_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			}
 
 			set_fs(curr_fs);
-			
+			kfree(ebuf);
 			break;
 		case MEMERASE64:
 			break;
@@ -1560,6 +1560,7 @@ int dumchar_open (struct inode *inode, struct file *filp)
 			printk("[dumchar_open] show_stack*************************************\n");
 			show_stack(NULL,NULL);
 			fo->act_filp = (struct file *)0xffffffff;
+			kfree(fo);
 			return -EINVAL;
 			
 	}else{
@@ -1588,6 +1589,7 @@ open_fail1:
 	filp_close(fo->act_filp, NULL);
 open_fail2:
 	fo->act_filp = NULL;
+kfree(fo);
 	return result;	
 }
 
@@ -1673,6 +1675,7 @@ int dumchar_release (struct inode *inode, struct file *filp)
 	}else{
 		filp_close(fo->act_filp,NULL);
 	}
+kfree(fo);
 	return 0;
 }
 

@@ -926,6 +926,11 @@ DISP_STATUS DISP_PowerEnable(BOOL enable)
     if (!is_ipoh_bootup)
         needStartEngine = true;
 
+    if (enable && lcm_drv && lcm_drv->resume_power)
+    {
+		lcm_drv->resume_power();
+    }
+
 	ret = (disp_drv->enable_power) ?
 		(disp_drv->enable_power(enable)) :
 		DISP_STATUS_NOT_IMPLEMENTED;
@@ -933,7 +938,11 @@ DISP_STATUS DISP_PowerEnable(BOOL enable)
     if (enable) {
         DAL_OnDispPowerOn();
     }
-	
+    else if (lcm_drv && lcm_drv->suspend_power)
+    {
+        lcm_drv->suspend_power();
+    }
+
 	up(&sem_update_screen);
 
 
@@ -2540,12 +2549,69 @@ DISP_STATUS DISP_Config_Wfd_Overlay_to_Memory(unsigned int mva, int enable)
 	return DSI_STATUS_OK;
 }	
 
+DISP_STATUS HDMI_Config_Overlay_to_Memory(unsigned int mva, int enable, unsigned int moutFormat)
+{
+    //  int ret = 0;
+
+    //  struct disp_path_config_mem_out_struct mem_out = {0};
+	MemOutConfig.outFormat = moutFormat;
+    if (enable)
+    {
+
+        MemOutConfig.enable = 1;
+        MemOutConfig.dstAddr = mva;
+        MemOutConfig.srcROI.x = 0;
+        MemOutConfig.srcROI.y = 0;
+        MemOutConfig.srcROI.height = DISP_GetScreenHeight();
+        MemOutConfig.srcROI.width = DISP_GetScreenWidth();
+
+#if !defined(MTK_WFD_SUPPORT) && !defined(MTK_HDMI_SUPPORT)
+        mutex_lock(&MemOutSettingMutex);
+        MemOutConfig.dirty = 1;
+        mutex_unlock(&MemOutSettingMutex);
+#endif
+    }
+    else
+    {
+        MemOutConfig.enable = 0;
+        MemOutConfig.dstAddr = mva;
+        MemOutConfig.srcROI.x = 0;
+        MemOutConfig.srcROI.y = 0;
+        MemOutConfig.srcROI.height = DISP_GetScreenHeight();
+        MemOutConfig.srcROI.width = DISP_GetScreenWidth();
+
+        //#if !defined(MTK_WFD_SUPPORT) && !defined(MTK_HDMI_SUPPORT)
+        mutex_lock(&MemOutSettingMutex);
+        MemOutConfig.dirty = 1;
+        mutex_unlock(&MemOutSettingMutex);
+        //#endif
+
+        // Wait for reg update.
+        wait_event_interruptible(reg_update_wq, !MemOutConfig.dirty);
+    }
+
+	printk("HDMI_Config_Overlay_to_Memory done: %d\n",enable);
+    return DSI_STATUS_OK;
+}
+
 DISP_STATUS DISP_Capture_Framebuffer( unsigned int pvbuf, unsigned int bpp, unsigned int is_early_suspended )
 {
     unsigned int mva;
     unsigned int ret = 0;
     M4U_PORT_STRUCT portStruct;
 	DISP_FUNC();
+	int i;
+    for (i=0; i<OVL_LAYER_NUM; i++)
+    {
+        if (cached_layer_config[i].layer_en && cached_layer_config[i].security)
+            break;
+    }
+    if (i < OVL_LAYER_NUM)
+    {
+        // There is security layer.
+        memset(pvbuf, 0, DISP_GetScreenHeight()*DISP_GetScreenWidth()*bpp/8);
+        return DISP_STATUS_OK;
+    }
 	disp_drv_init_context();
 	disp_module_clock_on(DISP_MODULE_WDMA1, "Screen Capture");
 

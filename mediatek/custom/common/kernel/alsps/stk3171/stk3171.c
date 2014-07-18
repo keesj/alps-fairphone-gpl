@@ -2218,7 +2218,7 @@ static struct platform_driver stk3171_alsps_driver = {
 static int __init stk3171_init(void)
 {
 	APS_FUN();
-	struct alsps_hw *hw = get_cust_alsps_hw();
+	struct alsps_hw_stk *hw = get_cust_alsps_hw_stk();
 	APS_LOG("%s: i2c_number=%d\n", __func__,hw->i2c_num); 
 	i2c_register_board_info(hw->i2c_num, &i2c_stk3171, 1);
 	if(platform_driver_register(&stk3171_alsps_driver))

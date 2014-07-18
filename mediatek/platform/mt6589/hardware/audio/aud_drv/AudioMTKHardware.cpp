@@ -56,7 +56,11 @@
 #define DL1_BUFFER_SIZE (0x4000)
 #define DL2_BUFFER_SIZE (0x4000)
 #define AWB_BUFFER_SIZE (0x4000)
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+#define VUL_BUFFER_SIZE (0x8000)
+#else
 #define VUL_BUFFER_SIZE (0x4000)
+#endif
 // for 16k samplerate  below , 8K buffer should be enough
 #define DAI_BUFFER_SIZE (0x2000)
 #define MOD_DAI_BUFFER_SIZE (0x2000)
@@ -94,6 +98,9 @@ static String8 keyLR_ChannelSwitch = String8("LRChannelSwitch");
 //force use Min MIC or Ref MIC data
 //only support on dual MIC for only get main Mic or RefMic data
 static String8 keyForceUseSpecificMicData = String8("ForceUseSpecificMic");
+
+//enable using MTK VoIP in normal mode, otherwise will only using in in-communication mode or input source is in-communication
+static String8 keyEnableNormalModeVoIP = String8("EnableNormalModeVoIP");
 
 #ifdef MTK_AUDIO_HD_REC_SUPPORT
 //static String8 key_HD_REC_MODE = String8("HDRecordMode");
@@ -162,6 +169,10 @@ static String8 keySetMicAnaLogSwitch   = String8("MicAnaLogSwitch");
 
 // get FSync flag
 static String8 keyGetFSyncFlag = String8("GET_FSYNC_FLAG");
+
+// for stereo output
+static String8 keyEnableStereoOutput = String8("EnableStereoOutput");
+
 
 /*==============================================================================
  *                     Emulator
@@ -455,6 +466,16 @@ status_t AudioMTKHardware::setParameters(const String8 &keyValuePairs)
         }
         goto EXIT_SETPARAMETERS;
     }
+
+    if (param.getInt(keyEnableNormalModeVoIP, value) == NO_ERROR) {
+        ALOGD("EnableNormalModeVoIP=%d", value);
+        param.remove(keyEnableNormalModeVoIP);
+        bool bEnableNormalModeVoIP = value;
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+        mAudioSpeechEnhanceInfoInstance->SetEnableNormalModeVoIP(bEnableNormalModeVoIP);
+#endif
+        goto EXIT_SETPARAMETERS;
+    }
 #endif
     //<---for audio tool(speech/ACF/HCF/DMNR/HD/Audiotaste calibration)
     // calibrate speech parameters
@@ -567,6 +588,7 @@ status_t AudioMTKHardware::setParameters(const String8 &keyValuePairs)
         bool bWB = (value >> 4) & 0x000F;
         status_t ret = NO_ERROR;
         switch (cmdType) {
+#ifdef DMNR_TUNNING_AT_MODEMSIDE
             case DUAL_MIC_REC_PLAY_STOP:
                 ret = mAudioTuningInstance->enableDMNRModem2Way(false, bWB, P2W_RECEIVER_OUT, P2W_NORMAL);
                 break;
@@ -579,6 +601,20 @@ status_t AudioMTKHardware::setParameters(const String8 &keyValuePairs)
             case DUAL_MIC_REC_PLAY_HS:
                 ret = mAudioTuningInstance->enableDMNRModem2Way(true, bWB, P2W_HEADSET_OUT, P2W_NORMAL);
                 break;
+#else//dmnr tunning at ap side
+            case DUAL_MIC_REC_PLAY_STOP:
+                ret = mAudioTuningInstance->enableDMNRAtApSide(false, bWB, OUTPUT_DEVICE_RECEIVER, RECPLAY_MODE);
+                break;
+            case DUAL_MIC_REC:
+                ret = mAudioTuningInstance->enableDMNRAtApSide(true, bWB, OUTPUT_DEVICE_RECEIVER, RECONLY_MODE);
+                break;
+            case DUAL_MIC_REC_PLAY:
+                ret = mAudioTuningInstance->enableDMNRAtApSide(true, bWB, OUTPUT_DEVICE_RECEIVER, RECPLAY_MODE);
+                break;
+            case DUAL_MIC_REC_PLAY_HS:
+                ret = mAudioTuningInstance->enableDMNRAtApSide(true, bWB, OUTPUT_DEVICE_HEADSET, RECPLAY_MODE);
+                break;
+#endif
             default:
                 ret = BAD_VALUE;
                 break;
@@ -596,7 +632,12 @@ status_t AudioMTKHardware::setParameters(const String8 &keyValuePairs)
 
     if (param.get(keyDUALMIC_OUT_FILE_NAME, value_str) == NO_ERROR) {
         if (mAudioTuningInstance->setRecordFileName(value_str.string()) == NO_ERROR)
+        {
+#ifndef DMNR_TUNNING_AT_MODEMSIDE
+            if(mAudioSpeechEnhanceInfoInstance->SetHDRecVMFileName(value_str.string()) == NO_ERROR)
+#endif
             param.remove(keyDUALMIC_OUT_FILE_NAME);
+        }
         goto EXIT_SETPARAMETERS;
     }
 
@@ -643,6 +684,9 @@ status_t AudioMTKHardware::setParameters(const String8 &keyValuePairs)
     if (param.getInt(keyEnable_Dual_Mic_Setting, value) == NO_ERROR) {
         param.remove(keyEnable_Dual_Mic_Setting);
         SpeechEnhancementController::GetInstance()->SetDynamicMaskOnToAllModem(SPH_ENH_DYNAMIC_MASK_DMNR, (bool)value);
+#if defined(MTK_HANDSFREE_DMNR_SUPPORT) && defined(MTK_VOIP_ENHANCEMENT_SUPPORT)
+        mAudioSpeechEnhanceInfoInstance->UpdateDynamicSpeechEnhancementMask();
+#endif
         goto EXIT_SETPARAMETERS;
     }
 
@@ -650,7 +694,9 @@ status_t AudioMTKHardware::setParameters(const String8 &keyValuePairs)
     if (param.getInt(keySET_LSPK_DMNR_ENABLE, value) == NO_ERROR) {
         param.remove(keySET_LSPK_DMNR_ENABLE);
         SpeechEnhancementController::GetInstance()->SetDynamicMaskOnToAllModem(SPH_ENH_DYNAMIC_MASK_LSPK_DMNR, (bool)value);
-
+#if defined(MTK_HANDSFREE_DMNR_SUPPORT) && defined(MTK_VOIP_ENHANCEMENT_SUPPORT)
+        mAudioSpeechEnhanceInfoInstance->UpdateDynamicSpeechEnhancementMask();
+#endif
         if (SpeechEnhancementController::GetInstance()->GetMagicConferenceCallOn() == true &&
             SpeechEnhancementController::GetInstance()->GetDynamicMask(SPH_ENH_DYNAMIC_MASK_LSPK_DMNR) == true) {
             ALOGE("Cannot open MagicConCall & LoudSpeaker DMNR at the same time!!");
@@ -784,6 +830,14 @@ status_t AudioMTKHardware::setParameters(const String8 &keyValuePairs)
         goto EXIT_SETPARAMETERS;
     }
     #endif
+    if (param.getInt(keyEnableStereoOutput, value) == NO_ERROR)
+    {
+        ALOGD("keyEnableStereoOutput=%d",value);
+        mAudioMTKStreamManager->setParameters (keyValuePairs,0);
+        param.remove(keyEnableStereoOutput);
+        goto EXIT_SETPARAMETERS;
+    }
+
 EXIT_SETPARAMETERS:
     if (param.size()) {
         ALOGE("%s() still have param.size() = %d, remain param = \"%s\"", __FUNCTION__, param.size(), param.toString().string());
@@ -873,7 +927,7 @@ String8 AudioMTKHardware::getParameters(const String8 &keys)
         returnParam.add(keyGET_MAGIC_CON_CALL_ENABLE, value);
         goto EXIT_GETPARAMETERS;
     }
-    
+
     // Get input Fsync flag
     if (param.getInt(keyGetFSyncFlag, cmdType) == NO_ERROR) {
         param.remove(keyGetFSyncFlag);
@@ -1377,23 +1431,23 @@ status_t AudioMTKHardware::SetAudioData(int par1, size_t len, void *ptr)
             switch (audioTasteTuningParam.cmd_type) {
                 case AUD_TASTE_STOP: {
 
-                    mAudParamTuning->enableModemPlaybackVIASPHPROC(false);
-                    audioTasteTuningParam.wb_mode = mAudParamTuning->m_bWBMode;
-                    mAudParamTuning->updataOutputFIRCoffes(&audioTasteTuningParam);
+                    mAudioTuningInstance->enableModemPlaybackVIASPHPROC(false);
+                    audioTasteTuningParam.wb_mode = mAudioTuningInstance->m_bWBMode;
+                    mAudioTuningInstance->updataOutputFIRCoffes(&audioTasteTuningParam);
 
                     break;
                 }
                 case AUD_TASTE_START: {
 
-                    mAudParamTuning->setMode(audioTasteTuningParam.phone_mode);
-                    ret = mAudParamTuning->setPlaybackFileName(audioTasteTuningParam.input_file);
+                    mAudioTuningInstance->setMode(audioTasteTuningParam.phone_mode);
+                    ret = mAudioTuningInstance->setPlaybackFileName(audioTasteTuningParam.input_file);
                     if (ret != NO_ERROR)
                         return ret;
-                    ret = mAudParamTuning->setDLPGA((uint32) audioTasteTuningParam.dlPGA);
+                    ret = mAudioTuningInstance->setDLPGA((uint32) audioTasteTuningParam.dlPGA);
                     if (ret != NO_ERROR)
                         return ret;
-                    mAudParamTuning->updataOutputFIRCoffes(&audioTasteTuningParam);
-                    ret = mAudParamTuning->enableModemPlaybackVIASPHPROC(true, audioTasteTuningParam.wb_mode);
+                    mAudioTuningInstance->updataOutputFIRCoffes(&audioTasteTuningParam);
+                    ret = mAudioTuningInstance->enableModemPlaybackVIASPHPROC(true, audioTasteTuningParam.wb_mode);
                     if (ret != NO_ERROR)
                         return ret;
 
@@ -1401,12 +1455,12 @@ status_t AudioMTKHardware::SetAudioData(int par1, size_t len, void *ptr)
                 }
                 case AUD_TASTE_DLDG_SETTING:
                 case AUD_TASTE_INDEX_SETTING: {
-                    //mAudParamTuning->updataOutputFIRCoffes(&audioTasteTuningParam);
+                    mAudioTuningInstance->updataOutputFIRCoffes(&audioTasteTuningParam);
                     break;
                 }
                 case AUD_TASTE_DLPGA_SETTING: {
-                    mAudParamTuning->setMode(audioTasteTuningParam.phone_mode);
-                    ret = mAudParamTuning->setDLPGA((uint32) audioTasteTuningParam.dlPGA);
+                    mAudioTuningInstance->setMode(audioTasteTuningParam.phone_mode);
+                    ret = mAudioTuningInstance->setDLPGA((uint32) audioTasteTuningParam.dlPGA);
                     if (ret != NO_ERROR)
                         return ret;
 
@@ -2110,12 +2164,6 @@ status_t AudioMTKHardware::setMode(int NewMode)
         return BAD_VALUE;
     }
 
-    if (new_mode == mMode) {
-        ALOGE("Newmode and Oldmode is the same!!!!");
-        mSetModeLock.unlock();
-        return INVALID_OPERATION;
-    }
-
 #if !defined(MTK_ENABLE_MD1) && defined(MTK_ENABLE_MD2) // CTS want to set MODE_IN_CALL, but only modem 2 is available
     if (new_mode == AUDIO_MODE_IN_CALL) {
         ALOGE("There is no modem 1 in this project!! Set modem 2 instead!!");
@@ -2129,20 +2177,17 @@ status_t AudioMTKHardware::setMode(int NewMode)
     }
 #endif
 
-    // save the new mode and apply it later
+    if (new_mode == mMode) {
+        ALOGE("Newmode and Oldmode is the same!!!!");
+        mSetModeLock.unlock();
+        return INVALID_OPERATION;
+    }
+
+    // save the new mode and apply it now
     mNextMode = new_mode;
+    doSetMode();
 
     ALOGD("-%s(), mode = %d", __FUNCTION__, new_mode);
-
-    // (Normal -> Ringtone) or (Ringtone -> Normal): no rounting, set mode directly. ALPS00456175
-    if ((mMode == AUDIO_MODE_NORMAL   && mNextMode == AUDIO_MODE_RINGTONE) ||
-        (mMode == AUDIO_MODE_RINGTONE && mNextMode == AUDIO_MODE_NORMAL)) {
-        doSetMode();
-    }
-    else { // call related setMode, do setMode later
-        ALOGD("%s(), call related setMode, do setMode later", __FUNCTION__);
-    }
-
     return NO_ERROR;
 }
 
@@ -2283,6 +2328,12 @@ status_t AudioMTKHardware::doSetMode()
 
     mMode = mNextMode;  // save mode when all things done.
     mNextMode = AUDIO_MODE_CURRENT;
+
+    if (ModeInCall(mMode) == false)
+    {
+        setMasterVolume(mAudioVolumeInstance->getMasterVolume());
+    }
+
     mAudioResourceManager->DisableAudioLock(AudioResourceManagerInterface::AUDIO_VOLUME_LOCK);
     mAudioResourceManager->DisableAudioLock(AudioResourceManagerInterface::AUDIO_MODE_LOCK);
     mAudioResourceManager->DisableAudioLock(AudioResourceManagerInterface::AUDIO_HARDWARE_LOCK);

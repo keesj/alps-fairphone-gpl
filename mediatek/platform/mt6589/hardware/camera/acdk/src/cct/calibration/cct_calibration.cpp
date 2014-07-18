@@ -1,3 +1,38 @@
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ */
+/* MediaTek Inc. (C) 2010. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
+
 ///////////////////////////////////////////////////////////////////////////////
 // No Warranty
 // Except as may be otherwise agreed to in writing, no warranties of any
@@ -1444,6 +1479,7 @@ MRESULT AcdkCalibration::mrExpLinearity(MINT32 a_i4Gain,
         */
         ACDK_LOGD("[Disable 3A]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+        m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
 
         ACDK_LOGD("[Lock Exposure Setting]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_LOCK_EXPOSURE_SETTING, NULL, 0, NULL, 0, &u4RetLen);
@@ -1607,6 +1643,7 @@ MRESULT AcdkCalibration::mrGainLinearity(MINT32 a_i4ExpTime,
         */
         ACDK_LOGD("[Disable 3A]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+        m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
 
         ACDK_LOGD("[Lock Exposure Setting]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_LOCK_EXPOSURE_SETTING, NULL, 0, NULL, 0, &u4RetLen);
@@ -1753,6 +1790,7 @@ MRESULT AcdkCalibration::mrGainTableLinearity(MINT32 a_i4ExpTime,
         */
         ACDK_LOGD("[Disable 3A]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+        m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
 
         ACDK_LOGD("[Lock Exposure Setting]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_LOCK_EXPOSURE_SETTING, NULL, 0, NULL, 0, &u4RetLen);
@@ -1916,6 +1954,7 @@ MRESULT AcdkCalibration::mrOBStability(MINT32 a_i4ExpTime,
         */
         ACDK_LOGD("[Disable 3A]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+        m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
 
         ACDK_LOGD("[Lock Exposure Setting]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_LOCK_EXPOSURE_SETTING, NULL, 0, NULL, 0, &u4RetLen);
@@ -2057,6 +2096,7 @@ MRESULT AcdkCalibration::mrGainTableOBStability(MINT32 a_i4ExpTime,
         */
         ACDK_LOGD("[Disable 3A]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+        m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
 
         ACDK_LOGD("[Lock Exposure Setting]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_LOCK_EXPOSURE_SETTING, NULL, 0, NULL, 0, &u4RetLen);
@@ -2191,6 +2231,8 @@ MRESULT AcdkCalibration::mrCalOB(MINT32 a_i4ExpTime,
         */
         ACDK_LOGD("[Disable 3A]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+        m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+
 
         ACDK_LOGD("[Lock Exposure Setting]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_LOCK_EXPOSURE_SETTING, NULL, 0, NULL, 0, &u4RetLen);
@@ -2338,6 +2380,7 @@ MRESULT AcdkCalibration::mrCalMinISO(MINT32 a_i4LV,
     */
     ACDK_LOGD("[Disable 3A]\n");
     m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+    m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
 
     ACDK_LOGD("[Lock Exposure Setting]\n");
     m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_LOCK_EXPOSURE_SETTING, NULL, 0, NULL, 0, &u4RetLen);
@@ -2542,6 +2585,7 @@ MRESULT AcdkCalibration::mrCalMinISO(MINT32 a_i4LV,
     */
     ACDK_LOGD("[Disable 3A]\n");
     m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+    m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
 
     ACDK_LOGD("[Lock Exposure Setting]\n");
     m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_LOCK_EXPOSURE_SETTING, NULL, 0, NULL, 0, &u4RetLen);
@@ -2609,6 +2653,7 @@ MRESULT AcdkCalibration::mrCalMinISO(MINT32 a_i4LV,
     */
     ACDK_LOGD("[Disable 3A]\n");
     m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+    m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
 
     ACDK_LOGD("[Lock Exposure Setting]\n");
     m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_LOCK_EXPOSURE_SETTING, NULL, 0, NULL, 0, &u4RetLen);
@@ -2845,6 +2890,7 @@ MRESULT AcdkCalibration::mrCalMinimumSaturationGain(MINT32 a_i4TargetDeclineRate
         */
         ACDK_LOGD("[Disable 3A]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+        m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
 
         ACDK_LOGD("[Lock Exposure Setting]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_LOCK_EXPOSURE_SETTING, NULL, 0, NULL, 0, &u4RetLen);
@@ -2949,6 +2995,7 @@ MRESULT AcdkCalibration::mrCalMinimumSaturationGain(MINT32 a_i4TargetDeclineRate
         */
         ACDK_LOGD("[Disable 3A]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+        m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
 
         ACDK_LOGD("[Lock Exposure Setting]\n");
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_LOCK_EXPOSURE_SETTING, NULL, 0, NULL, 0, &u4RetLen);
@@ -3163,6 +3210,7 @@ MRESULT AcdkCalibration::mrCalLinearityC(MINT32 a_i4Expline, MINT32 a_i4ExpTimes
 
    //disable AE
    m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+   m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
    //disable AWB
    m_pAcdkBaseObj->sendcommand(ACDK_CCT_V2_OP_AWB_DISABLE_AUTO_RUN, NULL, 0, NULL , 0, &u4RetLen);
 
@@ -3183,6 +3231,7 @@ MRESULT AcdkCalibration::mrCalLinearityC(MINT32 a_i4Expline, MINT32 a_i4ExpTimes
     {
         //disable AE
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+        m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
         //disable AWB
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_V2_OP_AWB_DISABLE_AUTO_RUN, NULL, 0, NULL , 0, &u4RetLen);
 
@@ -3644,6 +3693,7 @@ Exit:
 extern void lscReConstruct(int nrow, int ncol, UINT8  *input_buffer, UINT16 *output_buffer);
 extern void vlscHWTBLCAL(TBL_INFO_T info);
 extern void vLSC_Calibration_INIT(UINT8* a_u1BufferAddr);
+extern void vLSC_Calibration_END(void);
 extern void vLSC_PARAM_INIT(LSC_CAL_INI_PARAM_T a_rLSCCaliINIParam);
 extern MRESULT ModifyBayerOrder(MUINT32 *coeff_table, MUINT32 length, int old_order, int new_order);
 extern MRESULT mrLSC_Calibrate(LSC_CALI_INFO_T cali_info, UINT8 a_u1Mode, UINT16 a_u2SVDTermNum);
@@ -3761,6 +3811,7 @@ MRESULT SetShadingAE(AcdkBase *m_pAcdkBaseObj) {
 
     //DisableAE before set AE parameter
     m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
+    m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
 
     //recalculate exposure gain and set AE parameter
     //this is for using user setting sensor gain to do calibration
@@ -3805,7 +3856,6 @@ MRESULT SetShadingAE(AcdkBase *m_pAcdkBaseObj) {
     return S_ACDK_CALIBRATION_OK;
 }
 
-#define DOUBLE_BUFFER_WA 1
 MBOOL
 AcdkCalibration::
 GetShadingRaw(eCAMERA_MODE mode, UINT8 ColorTemp) {
@@ -3823,8 +3873,10 @@ GetShadingRaw(eCAMERA_MODE mode, UINT8 ColorTemp) {
     m_pAcdkBaseObj->sendcommand(ACDK_CCT_V2_OP_ISP_GET_SHADING_ON_OFF, (UINT8 *)&SHAD_EN,
                 sizeof(SHAD_EN), (UINT8 *)&SHAD_EN, sizeof(SHAD_EN), (UINT32 *)&len);
 
-#if DOUBLE_BUFFER_WA
-    // Workaround Double Buffer  ==> clear LSC table to 0 before calibration instead of disable LSC 
+//#if DOUBLE_BUFFER_WA
+	if(LscMgr::getInstance()->getActiveSensorDev() == ESensorDev_Sub)
+	{
+    // Workaround Double Buffer  ==> clear LSC table to 0 before calibration instead of disable LSC
 	switch(mode)
 	{
 		case PREVIEW_MODE:
@@ -3839,13 +3891,15 @@ GetShadingRaw(eCAMERA_MODE mode, UINT8 ColorTemp) {
 		default:
 		break;
 	}
-#else
+	}
+	else
+//#endif
+	{
     m_pAcdkBaseObj->sendcommand(ACDK_CCT_V2_OP_ISP_SET_SHADING_ON_OFF, (UINT8 *)&disable,
             sizeof(disable), NULL, 0, NULL);
-
     LscMgr::getInstance()->enableLsc(MFALSE);
     LscMgr::getInstance()->enBypass(MTRUE);
-#endif
+	}
 
 #if ENABLE_TSF
     if (isEnableTSF() == MTRUE)
@@ -3928,9 +3982,11 @@ MRESULT AcdkCalibration::mrCalLenShading(INT32 a_i4XINIBorder, INT32 a_i4XENDBor
     MUINT8 uCompMode = CAMERA_TUNING_PREVIEW_SET;
 
     MINT32 i4AEFlickerMode = 0;
-
+#if 0 // sammy
     TBL_INFO_T rTableINTO;
-
+#else
+    MUINT32 u4DstTblSize;
+#endif
     typedef ACDK_CCT_MODULE_CTRL_STRUCT i_type;
     i_type Shading_Control;
     i_type Shading_Calibration_Control;
@@ -4095,7 +4151,7 @@ MRESULT AcdkCalibration::mrCalLenShading(INT32 a_i4XINIBorder, INT32 a_i4XENDBor
 
             sync();
         }
-
+#if 0 // sammy
         //!Apply parameter ISP
         UINT8 uShadingTableSVD[MAX_SVD_SHADING_SIZE]={0};
         UINT16 uShadingTableGain[MAX_SHADING_SIZE]={0}; // buffer size > rLSCCaliINIParam.i4GridXNUM*rLSCCaliINIParam.i4GridYNUM*4
@@ -4126,6 +4182,14 @@ MRESULT AcdkCalibration::mrCalLenShading(INT32 a_i4XINIBorder, INT32 a_i4XENDBor
         // for 89 only, B channel first
         ACDK_LOGD("ModifyBayerOrder buff size %d", sizeof(uShadingTableCoef));
         ModifyBayerOrder(uShadingTableCoef, MAX_SHADING_PvwFrm_SIZE, g_lsc_param.bayer_order, 0); // 0: B
+#else
+        u4DstTblSize = (rLSCCaliINIParam.i4GridXNUM-1)*(rLSCCaliINIParam.i4GridYNUM-1)*16;
+        UINT8 uShadingTableSVD[MAX_SVD_SHADING_SIZE]={0};
+        vlscHWTBLCAL(g_lsc_cali_info.tbl_info);
+        // for 89 only, B channel first
+        ACDK_LOGD("ModifyBayerOrder buff size %d", sizeof(g_lsc_cali_info.tbl_info.dst_tbl_addr));
+        ModifyBayerOrder(g_lsc_cali_info.tbl_info.dst_tbl_addr, u4DstTblSize, g_lsc_param.bayer_order, 0); // 0: B
+#endif
 
         ACDK_CCT_TABLE_SET_STRUCT  shadingTable;
         memset (&shadingTable, 0, sizeof(ACDK_CCT_TABLE_SET_STRUCT));
@@ -4136,9 +4200,14 @@ MRESULT AcdkCalibration::mrCalLenShading(INT32 a_i4XINIBorder, INT32 a_i4XENDBor
 
         ACDK_CCT_TABLE_SET_STRUCT  shadingTablePolyCoef;
         memset (&shadingTablePolyCoef, 0, sizeof(ACDK_CCT_TABLE_SET_STRUCT));
-        shadingTablePolyCoef.Length = MAX_SHADING_PvwFrm_SIZE;
         shadingTablePolyCoef.Offset = 0;
+#if 0 // sammy
+        shadingTablePolyCoef.Length = MAX_SHADING_PvwFrm_SIZE;
         shadingTablePolyCoef.pBuffer = (UINT32 *)uShadingTableCoef;//g_lsc_cali_info.tbl_info.dst_tbl_addr;
+#else
+        shadingTablePolyCoef.Length = u4DstTblSize;
+        shadingTablePolyCoef.pBuffer = (UINT32 *)g_lsc_cali_info.tbl_info.dst_tbl_addr;//g_lsc_cali_info.tbl_info.dst_tbl_addr;
+#endif
         shadingTablePolyCoef.Mode = CAMERA_TUNING_PREVIEW_SET;
         if (a_u1FixShadingIndex == 0)
         {
@@ -4207,7 +4276,11 @@ MRESULT AcdkCalibration::mrCalLenShading(INT32 a_i4XINIBorder, INT32 a_i4XENDBor
                                                   0,
                                                   &u4RetLen);
         }
+#if 0 // sammy
         fclose(fp);
+#else
+	vLSC_Calibration_END();
+#endif
         ACDK_LOGD("[%s] Preview Done\n", __FUNCTION__);
     }
 
@@ -4322,6 +4395,7 @@ MRESULT AcdkCalibration::mrCalLenShading(INT32 a_i4XINIBorder, INT32 a_i4XENDBor
             sync();
         }
 
+#if 0 // sammy
         //!Apply parameter ISP
         UINT8 uShadingTableSVD[MAX_SVD_SHADING_SIZE]={0};
         UINT16 uShadingTableGain[MAX_SHADING_SIZE]={0};
@@ -4349,6 +4423,13 @@ MRESULT AcdkCalibration::mrCalLenShading(INT32 a_i4XINIBorder, INT32 a_i4XENDBor
         rTableINTO.dst_tbl_addr = uShadingTableCoef;
         vlscHWTBLCAL(rTableINTO);
         ModifyBayerOrder(uShadingTableCoef, MAX_SHADING_CapTil_SIZE, g_lsc_param.bayer_order, 0); // 0: B
+#else
+        u4DstTblSize = (rLSCCaliINIParam.i4GridXNUM-1)*(rLSCCaliINIParam.i4GridYNUM-1)*16;
+        ACDK_LOGD("[mrCalLenShading]u4DstTblSize =%d\n", u4DstTblSize);
+        UINT8 uShadingTableSVD[MAX_SVD_SHADING_SIZE]={0};
+        vlscHWTBLCAL(g_lsc_cali_info.tbl_info);
+        ModifyBayerOrder(g_lsc_cali_info.tbl_info.dst_tbl_addr, u4DstTblSize, g_lsc_param.bayer_order, 0); // 0: B
+#endif
 
         ACDK_CCT_TABLE_SET_STRUCT  shadingTable;
         memset (&shadingTable, 0, sizeof(ACDK_CCT_TABLE_SET_STRUCT));
@@ -4359,9 +4440,14 @@ MRESULT AcdkCalibration::mrCalLenShading(INT32 a_i4XINIBorder, INT32 a_i4XENDBor
 
         ACDK_CCT_TABLE_SET_STRUCT  shadingTablePolyCoef;
         memset (&shadingTablePolyCoef, 0, sizeof(ACDK_CCT_TABLE_SET_STRUCT));
-        shadingTablePolyCoef.Length = MAX_SHADING_CapTil_SIZE;
         shadingTablePolyCoef.Offset = 0;
+#if 0 // sammy
+        shadingTablePolyCoef.Length = MAX_SHADING_CapTil_SIZE;
         shadingTablePolyCoef.pBuffer = (UINT32 *)uShadingTableCoef;//g_lsc_cali_info.tbl_info.dst_tbl_addr;
+#else
+        shadingTablePolyCoef.Length = u4DstTblSize;
+        shadingTablePolyCoef.pBuffer = (UINT32 *)g_lsc_cali_info.tbl_info.dst_tbl_addr;//g_lsc_cali_info.tbl_info.dst_tbl_addr;
+#endif
         shadingTablePolyCoef.Mode = CAMERA_TUNING_CAPTURE_SET;
         if (a_u1FixShadingIndex == 0)
         {
@@ -4427,7 +4513,11 @@ MRESULT AcdkCalibration::mrCalLenShading(INT32 a_i4XINIBorder, INT32 a_i4XENDBor
                                                   0,
                                                   &u4RetLen);
         }
+#if 0 // sammy
         fclose(fp);
+#else
+	vLSC_Calibration_END();
+#endif
         ACDK_LOGD("[%s] Capture Done\n", __FUNCTION__);
     }
 
@@ -4541,6 +4631,7 @@ MRESULT AcdkCalibration::mrCalLenShading(INT32 a_i4XINIBorder, INT32 a_i4XENDBor
             sync();
         }
 
+#if 0 // sammy
         //!Apply parameter ISP
         UINT8 uShadingTableSVD[MAX_SVD_SHADING_SIZE]={0};
         UINT16 uShadingTableGain[MAX_SHADING_SIZE]={0}; // buffer size > rLSCCaliINIParam.i4GridXNUM*rLSCCaliINIParam.i4GridYNUM*4
@@ -4568,6 +4659,12 @@ MRESULT AcdkCalibration::mrCalLenShading(INT32 a_i4XINIBorder, INT32 a_i4XENDBor
         rTableINTO.dst_tbl_addr = uShadingTableCoef;
         vlscHWTBLCAL(rTableINTO);
         ModifyBayerOrder(uShadingTableCoef, MAX_SHADING_VdoFrm_SIZE, g_lsc_param.bayer_order, 0); // 0: B
+#else
+        u4DstTblSize = (rLSCCaliINIParam.i4GridXNUM-1)*(rLSCCaliINIParam.i4GridYNUM-1)*16;
+        UINT8 uShadingTableSVD[MAX_SVD_SHADING_SIZE]={0};
+        vlscHWTBLCAL(g_lsc_cali_info.tbl_info);
+        ModifyBayerOrder(g_lsc_cali_info.tbl_info.dst_tbl_addr, u4DstTblSize, g_lsc_param.bayer_order, 0); // 0: B
+#endif
 
         ACDK_CCT_TABLE_SET_STRUCT  shadingTable;
         memset (&shadingTable, 0, sizeof(ACDK_CCT_TABLE_SET_STRUCT));
@@ -4578,9 +4675,14 @@ MRESULT AcdkCalibration::mrCalLenShading(INT32 a_i4XINIBorder, INT32 a_i4XENDBor
 
         ACDK_CCT_TABLE_SET_STRUCT  shadingTablePolyCoef;
         memset (&shadingTablePolyCoef, 0, sizeof(ACDK_CCT_TABLE_SET_STRUCT));
-        shadingTablePolyCoef.Length = MAX_SHADING_VdoFrm_SIZE;
         shadingTablePolyCoef.Offset = 0;
+#if 0 // sammy
+        shadingTablePolyCoef.Length = MAX_SHADING_VdoFrm_SIZE;
         shadingTablePolyCoef.pBuffer = (UINT32 *)uShadingTableCoef;//g_lsc_cali_info.tbl_info.dst_tbl_addr;
+#else
+        shadingTablePolyCoef.Length = u4DstTblSize;
+        shadingTablePolyCoef.pBuffer = (UINT32 *)g_lsc_cali_info.tbl_info.dst_tbl_addr;
+#endif
         shadingTablePolyCoef.Mode = CAMERA_TUNING_VIDEO_SET;
         if (a_u1FixShadingIndex == 0)
         {
@@ -4646,7 +4748,11 @@ MRESULT AcdkCalibration::mrCalLenShading(INT32 a_i4XINIBorder, INT32 a_i4XENDBor
                     0,
                     &u4RetLen);
         }
+#if 0 // sammy
         fclose(fp);
+#else
+	vLSC_Calibration_END();
+#endif
         ACDK_LOGD("[%s] Video Done\n", __FUNCTION__);
     }
 Exit:
@@ -4661,6 +4767,7 @@ Exit:
     {
         m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_AE_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
     }
+    m_pAcdkBaseObj->sendcommand(ACDK_CCT_OP_FLASH_DISABLE, NULL, 0, NULL, 0, &u4RetLen);
     ACDK_LOGD("[%s] Exit:ACDK_CCT_V2_OP_AWB_\n", __FUNCTION__);
     //disable AWB
     if (i4AWBEnable == 1)

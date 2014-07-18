@@ -1,3 +1,28 @@
+/********************************************************************************************
+ *     LEGAL DISCLAIMER
+ *
+ *     (Header of MediaTek Software/Firmware Release or Documentation)
+ *
+ *     BY OPENING OR USING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ *     THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE") RECEIVED
+ *     FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON AN "AS-IS" BASIS
+ *     ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES, EXPRESS OR IMPLIED,
+ *     INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+ *     A PARTICULAR PURPOSE OR NONINFRINGEMENT. NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY
+ *     WHATSOEVER WITH RESPECT TO THE SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY,
+ *     INCORPORATED IN, OR SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK
+ *     ONLY TO SUCH THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
+ *     NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S SPECIFICATION
+ *     OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+ *
+ *     BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE LIABILITY WITH
+ *     RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE, AT MEDIATEK'S OPTION,
+TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE, OR REFUND ANY SOFTWARE LICENSE
+ *     FEES OR SERVICE CHARGE PAID BY BUYER TO MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ *     THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE WITH THE LAWS
+ *     OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF LAWS PRINCIPLES.
+ ************************************************************************************************/
 #define LOG_TAG "SeninfDrvImp"
 //
 #include <stdio.h>
@@ -1093,15 +1118,20 @@ int SeninfDrvImp::initTg1CSI2(bool csi2_en)
        temp = *(mpCSI2RxConfigRegAddr + (0x38/4));//MIPI_RX_HW_CAL_START
        mt65xx_reg_sync_writel(temp|0x00000004, mpCSI2RxConfigRegAddr + (0x38/4));        
        LOG_MSG("[initCSI2]:CSI0 calibration start !\n");
-        usleep(100);       
-       while(!((*(mpCSI2RxConfigRegAddr + (0x44/4)) & 0x10001) && (*(mpCSI2RxConfigRegAddr + (0x48/4)) & 0x101))){}
-       LOG_MSG("[initCSI2]:CSI0 calibration end !\n");
-
+ 
+       usleep(500);       
+       if(!((*(mpCSI2RxConfigRegAddr + (0x44/4)) & 0x10001) && (*(mpCSI2RxConfigRegAddr + (0x48/4)) & 0x101))){
+        LOG_ERR("[initCSI2]:CSI0 calibration failed!, CSI2Config Reg 0x44=0x%x, 0x48=0x%x\n",*(mpCSI2RxConfigRegAddr + (0x44/4)),*(mpCSI2RxConfigRegAddr + (0x48/4))); 
+        //ret = -1;
+       }
        SENINF_WRITE_BITS(pSeninf, SENINF1_CSI2_DBG, LNC_HSRXDB_EN, 0);
        SENINF_WRITE_BITS(pSeninf, SENINF1_CSI2_DBG, LN0_HSRXDB_EN, 0);
        SENINF_WRITE_BITS(pSeninf, SENINF1_CSI2_DBG, LN1_HSRXDB_EN, 0);
        SENINF_WRITE_BITS(pSeninf, SENINF1_CSI2_DBG, LN2_HSRXDB_EN, 0);
        SENINF_WRITE_BITS(pSeninf, SENINF1_CSI2_DBG, LN3_HSRXDB_EN, 0);
+
+       LOG_MSG("[initCSI2]:CSI0 calibration end !\n"); 
+             
 	}
 
     return ret;
@@ -1206,12 +1236,18 @@ int SeninfDrvImp::initTg2CSI2(bool csi2_en)
          temp = *(mpCSI2RxConfigRegAddr + (0x38/4));//MIPI_RX_HW_CAL_START
          mt65xx_reg_sync_writel(temp|0x00000004, mpCSI2RxConfigRegAddr + (0x38/4));
         LOG_MSG("[initCSI2]:CSI1 calibration start !\n");
-        usleep(1000);
-        while(!(*(mpCSI2RxConfigRegAddr + (0x4C/4)) & 0x10001)) {}
-        LOG_MSG("[initCSI2]:CSI1 calibration end !\n");
+       
+        usleep(500);       
+       if(!(*(mpCSI2RxConfigRegAddr + (0x4C/4)) & 0x10001)){
+        LOG_ERR("[initCSI2]:CSI0 calibration failed!, CSI2Config Reg 0x4C=0x%x\n",*(mpCSI2RxConfigRegAddr + (0x4C/4))); 
+        //ret = -1;
+       }  
         SENINF_WRITE_BITS(pSeninf, SENINF2_CSI2_DBG, LNC_HSRXDB_EN, 0);
         SENINF_WRITE_BITS(pSeninf, SENINF2_CSI2_DBG, LN0_HSRXDB_EN, 0);
         SENINF_WRITE_BITS(pSeninf, SENINF2_CSI2_DBG, LN1_HSRXDB_EN, 0);
+
+      
+        LOG_MSG("[initCSI2]:CSI1 calibration end !\n");       
      }
 
 

@@ -49,9 +49,10 @@
 #define SLP_PS      (0x03   << 5)
 #define INTM_PS     (1      << 7)
 
-#define CONFIG_STK_ALS_CHANGE_THRESHOLD	5
+#define CONFIG_STK_ALS_CHANGE_THRESHOLD	4
+#define C_CUST_ALS_LEVEL 16
 
-
+#define C_CUST_I2C_ADDR_NUM 5
 struct alsps_hw_stk {
     int i2c_num;                                    /*!< the i2c bus used by ALS/PS */
     int power_id;                                   /*!< the power id of the chip */

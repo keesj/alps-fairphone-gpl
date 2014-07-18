@@ -1,3 +1,38 @@
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ */
+/* MediaTek Inc. (C) 2010. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
+
 ///////////////////////////////////////////////////////////////////////////////
 // No Warranty
 // Except as may be otherwise agreed to in writing, no warranties of any
@@ -178,7 +213,7 @@ namespace NSACDK
                 *@return
                 *-0 indicates success, otherwise indicates fail
               */
-        virtual MINT32 setSrcDev(MINT32 srcDev);
+        virtual MINT32 setSrcDev(MINT32 srcDev); 
 
         /**
                 *@brief Show quick-view image
@@ -390,6 +425,34 @@ namespace NSACDK
               */
         MINT32 sensorFormatSetting(MUINT32 mode, MUINT32 &imgFormat, MUINT32 &imgSize, MUINT32 *imgStride = NULL);
 
+        /**
+                *@brief Setting shutter time
+                *@note this is for factory-camera auto-testing usage
+                *
+                *@param[in] a_time : specific shutter time
+                *
+                *@return
+                *-0 indicates success, otherwise indicates fail
+              */
+        virtual MINT32 setShutterTime(MUINT32 a_time);
+
+        /**
+                *@brief MakeExif Header
+                *@note this is for cct jpeg exif header
+                *
+                *@param[in] a_time : Jpeg Exif Header
+                *
+                *@return
+                *-0 indicates success, otherwise indicates fail
+              */
+        MBOOL makeExifHeader(MUINT32 const u4CamMode, 
+                                MUINT8* const puThumbBuf, 
+                                MUINT32 const u4ThumbSize, 
+                                MUINT8* puExifBuf, 
+                                MUINT32 &u4FinalExifSize, 
+                                MUINT32 u4ImgIndex, 
+                                MUINT32 u4GroupId);
+
         /********************************************************************************/
         
         AcdkMhalBase *m_pAcdkMhalObj;
@@ -424,6 +487,8 @@ namespace NSACDK
         MUINT32 mPrvStartX;
         MUINT32 mPrvStartY;
         MUINT32 mOrientation;
+        MBOOL   mIsFacotory;
+        MUINT16 mTestPatternOut;
 
         //capture related variable
         ISingleShot *m_pSingleShot;
@@ -432,7 +497,9 @@ namespace NSACDK
         MUINT32 mCapType;
         MUINT32 mQVWidth;
         MUINT32 mQVHeight;
-        
+        MBOOL   mUnPack;
+        MBOOL   mIsSOI; 
+
         // preview & display buffer
         IMEM_BUF_INFO mPrvIMemInfo[OVERLAY_BUFFER_CNT];
         IMEM_BUF_INFO mDispIMemInfo[OVERLAY_BUFFER_CNT];
@@ -459,6 +526,11 @@ namespace NSACDK
         MUINT32 mSensorHFlip;
         ACDK_SENSOR_RESOLUTION_INFO_STRUCT mSensorResolution;
         halSensorRawImageInfo_t mSensorFormatInfo;  // Although name is RawImageInfo, but can get both raw/yuv type
+
+        //factory-camera auto-testing
+        MUINT32 mSetShutTime;
+        MUINT32 mGetShutTime;
+        MUINT32 mGetCheckSumValue;
         //AF information
         MUINT32 mGetAFInfo;
 

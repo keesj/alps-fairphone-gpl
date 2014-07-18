@@ -43,6 +43,9 @@ static DEFINE_SPINLOCK(s5k3h7ymipiraw_drv_lock);
 #define SENSOR_PCLK_CAPTURE  	SENSOR_PCLK_PREVIEW //26000*10000
 #define SENSOR_PCLK_ZSD  		SENSOR_PCLK_CAPTURE
 
+
+#define S5K3H7_TEST_PATTERN_CHECKSUM (0x45e0e645)
+
 #if 0
 #define S5K3H7Y_DEBUG
 #ifdef S5K3H7Y_DEBUG
@@ -97,7 +100,7 @@ inline void S5K3H7Y_bytewrite_cmos_sensor(u16 addr, u32 para)
 	iWriteRegI2C(puSendCmd , 3,S5K3H7YMIPI_WRITE_ID);
 }
 
-static inline kal_uint32 GetScenarioLinelength()
+static inline kal_uint32 GetScenarioLinelength(void)
 {
 	kal_uint32 u4Linelength=S5K3H7Y_PV_PERIOD_PIXEL_NUMS; //+s5k3h7y.DummyPixels;
 	switch(s_S5K3H7YCurrentScenarioId)
@@ -121,7 +124,30 @@ static inline kal_uint32 GetScenarioLinelength()
 	return u4Linelength;		
 }
 
-static inline kal_uint32 GetScenarioFramelength()
+static inline kal_uint32 GetScenarioPixelClock(void)
+{
+	kal_uint32 Pixelcloclk = s5k3h7y.pvPclk;
+	switch(s_S5K3H7YCurrentScenarioId)
+	{
+		case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
+			Pixelcloclk = s5k3h7y.pvPclk;
+		break;
+		case MSDK_SCENARIO_ID_VIDEO_PREVIEW:
+			Pixelcloclk = s5k3h7y.m_vidPclk;
+		break;
+		case MSDK_SCENARIO_ID_CAMERA_ZSD:
+		case MSDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG:
+			Pixelcloclk = s5k3h7y.capPclk;
+		break;
+		default:
+		break;
+	}
+	//SENSORDB("u4Linelength=%d\n",u4Linelength);
+	return Pixelcloclk;		
+}
+
+
+static inline kal_uint32 GetScenarioFramelength(void)
 {
 	kal_uint32 u4Framelength=S5K3H7Y_PV_PERIOD_LINE_NUMS; //+s5k3h7y.DummyLines ;
 	switch(s_S5K3H7YCurrentScenarioId)
@@ -169,8 +195,7 @@ static inline void SetFramelength(kal_uint16 u2Framelength)
 
 void S5K3H7Y_write_shutter(kal_uint32 shutter)
 {
-	kal_uint16 line_length = 0;
-	kal_uint16 frame_length = 0;
+	kal_uint16 frame_length = 0, line_length = 0, framerate = 0 , pixelclock = 0;	
 	unsigned long flags;
 
 	#define SHUTTER_FRAMELENGTH_MARGIN 16
@@ -185,6 +210,20 @@ void S5K3H7Y_write_shutter(kal_uint32 shutter)
 	if (shutter+SHUTTER_FRAMELENGTH_MARGIN > frame_length)
 		frame_length = shutter + SHUTTER_FRAMELENGTH_MARGIN; //extend framelength
 
+	if(s5k3h7y.S5K3H7YAutoFlickerMode == KAL_TRUE)
+	{
+		line_length = GetScenarioLinelength();
+		pixelclock = GetScenarioPixelClock();
+		framerate = (10 * pixelclock) / (frame_length * line_length);
+		  
+		if(framerate == 300)
+		  	framerate = 296;
+		else if(framerate == 150)
+		  	framerate = 148;
+
+		frame_length = (10 * pixelclock) / (framerate * line_length);
+	}
+
 	spin_lock_irqsave(&s5k3h7ymipiraw_drv_lock,flags);
 	s5k3h7y.maxExposureLines = frame_length;
 	s5k3h7y.shutter = shutter;
@@ -195,13 +234,12 @@ void S5K3H7Y_write_shutter(kal_uint32 shutter)
  	S5K3H7Y_wordwrite_cmos_sensor(0x0202, shutter);
  	S5K3H7Y_bytewrite_cmos_sensor(0x0104, 0x00);    //Grouped parameter release
  	
-	SENSORDB("shutter=%d,frame_length=%d\n",shutter,frame_length);
+	SENSORDB("shutter=%d,frame_length=%d,framerate=%d\n",shutter,frame_length, framerate);
 }   /* write_S5K3H7Y_shutter */
 
 
 void write_S5K3H7Y_gain(kal_uint16 gain)
 {
-	kal_uint16 u2Gain=0;
 	unsigned long flags;
 	SENSORDB("gain=%d\n",gain);
 	
@@ -559,6 +597,7 @@ kal_bool S5K3H7Y_set_sensor_item_info(kal_uint16 group_idx, kal_uint16 item_idx,
     return KAL_TRUE; 
 }
 
+/*
 static void S5K3H7Y_SetDummy( const kal_uint32 iPixels, const kal_uint32 iLines )
 {
 	kal_uint16 u2Linelength = 0,u2Framelength = 0;
@@ -600,7 +639,8 @@ static void S5K3H7Y_SetDummy( const kal_uint32 iPixels, const kal_uint32 iLines 
 	S5K3H7Y_wordwrite_cmos_sensor(0x340,u2Framelength);
 	S5K3H7Y_wordwrite_cmos_sensor(0x342,u2Linelength);
 	S5K3H7Y_bytewrite_cmos_sensor(0x0104, 0x00);    //Grouped parameter hold    
-}   /*  S5K3H7Y_SetDummy */
+}  
+*/
 
 static void S5K3H7YInitSetting(void)
 {
@@ -1237,9 +1277,6 @@ UINT32 S5K3H7YControl(MSDK_SCENARIO_ID_ENUM ScenarioId, MSDK_SENSOR_EXPOSURE_WIN
 
 UINT32 S5K3H7YSetVideoMode(UINT16 u2FrameRate)
 {
-
-    kal_uint32 MIN_Frame_length =0,frameRate=0,extralines=0;
-	
 	s5k3h7y.sensorMode=MSDK_SCENARIO_ID_VIDEO_PREVIEW;
     SENSORDB("u2FrameRate=%d,sensorMode=%d\n", u2FrameRate,s5k3h7y.sensorMode);
 	
@@ -1260,36 +1297,56 @@ UINT32 S5K3H7YSetVideoMode(UINT16 u2FrameRate)
 	return ERROR_NONE;
 }
 
+static void S5K3H7YSetMaxFrameRate(UINT16 u2FrameRate)
+{
+	kal_uint16 FrameHeight;
+		
+	SENSORDB("[S5K4H5YX] [S5K4H5YXMIPISetMaxFrameRate] u2FrameRate=%d\n",u2FrameRate);
+
+	if(SENSOR_MODE_PREVIEW == s5k3h7y.sensorMode)
+	{
+		FrameHeight= (10 * s5k3h7y.pvPclk) / u2FrameRate / S5K3H7Y_PV_PERIOD_PIXEL_NUMS;
+		FrameHeight = (FrameHeight > S5K3H7Y_PV_PERIOD_LINE_NUMS) ? FrameHeight : S5K3H7Y_PV_PERIOD_LINE_NUMS;
+	}
+	else if(SENSOR_MODE_CAPTURE== s5k3h7y.sensorMode || SENSOR_MODE_ZSD_PREVIEW == s5k3h7y.sensorMode)
+	{
+		FrameHeight= (10 * s5k3h7y.capPclk) / u2FrameRate / S5K3H7Y_FULL_PERIOD_PIXEL_NUMS;
+		FrameHeight = (FrameHeight > S5K3H7Y_FULL_PERIOD_LINE_NUMS) ? FrameHeight : S5K3H7Y_FULL_PERIOD_LINE_NUMS;
+	}
+	else
+	{
+		FrameHeight = (10 * s5k3h7y.m_vidPclk) / u2FrameRate / S5K3H7Y_VIDEO_PERIOD_PIXEL_NUMS;
+		FrameHeight = (FrameHeight > S5K3H7Y_VIDEO_PERIOD_LINE_NUMS) ? FrameHeight : S5K3H7Y_VIDEO_PERIOD_LINE_NUMS;
+	}
+	SENSORDB("[S5K4H5YX] [S5K4H5YXMIPISetMaxFrameRate] FrameHeight=%d",FrameHeight);
+	SetFramelength(FrameHeight); /* modify dummy_pixel must gen AE table again */	
+}
+
+
 UINT32 S5K3H7YSetAutoFlickerMode(kal_bool bEnable, UINT16 u2FrameRate)
 {
-    SENSORDB("bEnable=%d,u2FrameRate=%d\n",bEnable,u2FrameRate);
-	
-	kal_uint32 frame_length = GetScenarioFramelength();
 	if(bEnable) 
-	{   // enable auto flicker
+	{
+		SENSORDB("[S5K4H5YX] [S5K4H5YXSetAutoFlickerMode] enable\n");
 		spin_lock(&s5k3h7ymipiraw_drv_lock);
 		s5k3h7y.S5K3H7YAutoFlickerMode = KAL_TRUE;
 		spin_unlock(&s5k3h7ymipiraw_drv_lock);
-		
-		if(s5k3h7y.maxExposureLines<frame_length)
-		{
-			frame_length=frame_length*2980/3000;
-			SetFramelength(frame_length);
-		}
+
+		if(u2FrameRate == 300)
+			S5K3H7YSetMaxFrameRate(296);
+		else if(u2FrameRate == 150)
+			S5K3H7YSetMaxFrameRate(148);
     } 
 	else 
 	{
+    	SENSORDB("[S5K4H5YX] [S5K4H5YXSetAutoFlickerMode] disable\n");
     	spin_lock(&s5k3h7ymipiraw_drv_lock);
         s5k3h7y.S5K3H7YAutoFlickerMode = KAL_FALSE;
 		spin_unlock(&s5k3h7ymipiraw_drv_lock);
-
-		if(s5k3h7y.maxExposureLines<frame_length)
-		{
-			SetFramelength(frame_length);
-		}
     }
     return ERROR_NONE;
 }
+
 
 UINT32 S5K3H7YSetTestPatternMode(kal_bool bEnable)
 {
@@ -1307,9 +1364,7 @@ UINT32 S5K3H7YSetTestPatternMode(kal_bool bEnable)
 
 UINT32 S5K3H7YMIPISetMaxFramerateByScenario(MSDK_SCENARIO_ID_ENUM scenarioId, MUINT32 frameRate) 
 {
-	kal_uint32 pclk;
-	kal_uint16 u2dummyLine;
-	kal_uint16 lineLength,frameLength;
+	kal_uint16 frameLength = 0;
 		
 	SENSORDB("scenarioId=%d,frameRate=%d\n",scenarioId,frameRate);
 	switch (scenarioId) 
@@ -1554,6 +1609,10 @@ UINT32 S5K3H7YFeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
 		case SENSOR_FEATURE_GET_DEFAULT_FRAME_RATE_BY_SCENARIO:
 			S5K3H7YMIPIGetDefaultFramerateByScenario((MSDK_SCENARIO_ID_ENUM)*pFeatureData32, (MUINT32 *)(*(pFeatureData32+1)));
 			break;
+        case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE://for factory mode auto testing             
+            *pFeatureReturnPara32= S5K3H7_TEST_PATTERN_CHECKSUM;           
+            *pFeatureParaLen=4;                             
+            break;
 
         default:
             break;

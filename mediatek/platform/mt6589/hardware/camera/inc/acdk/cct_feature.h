@@ -1,3 +1,38 @@
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ */
+/* MediaTek Inc. (C) 2010. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
+
 ///////////////////////////////////////////////////////////////////////////////
 // No Warranty
 // Except as may be otherwise agreed to in writing, no warranties of any
@@ -77,7 +112,6 @@ typedef enum
     ACDK_CCT_OP_DEV_GET_DSC_INFO,
     ACDK_CCT_OP_RESUME_AE_AWB_PREVIEW_FROM_UNFINISHED_CAPTURE,
     ACDK_CCT_OP_DEV_MODE_SIZE,
-    ACDK_CMD_GET_AF_INFO,
 
     //NVRAM
     ACDK_CCT_OP_LOAD_FROM_NVRAM = CCT_NVRAM_FEATURE_START,               //load from nvram
@@ -440,6 +474,7 @@ typedef struct STILL_CAPTURE_STRUCT_S
     UINT16 u2JPEGEncHeight;
     Func_CB fpCapCB;
     MINT32 i4IsSave; //0-don't save, 1-save
+    MBOOL bUnPack;
 public :
     STILL_CAPTURE_STRUCT_S(eCAMERA_MODE a_camMode = CAPTURE_MODE,
                                          eACDK_OPERA_MODE a_operaMode = ACDK_OPT_META_MODE,
@@ -447,14 +482,16 @@ public :
                                          UINT16 a_jpegEncWdth = 0,
                                          UINT16 a_jpegEncHeight = 0,
                                          Func_CB a_funCB = NULL,
-                                         MINT32 a_isSave = 0)
+                                         MINT32 a_isSave = 0,
+                                         MBOOL a_unPack = MFALSE)
                                                     : eCameraMode(a_camMode),
                                                       eOperaMode(a_operaMode),
                                                       eOutputFormat(a_outFormat),
                                                       u2JPEGEncWidth(a_jpegEncWdth),
                                                       u2JPEGEncHeight(a_jpegEncHeight),
                                                       fpCapCB(a_funCB),
-                                                      i4IsSave(a_isSave)
+                                                      i4IsSave(a_isSave),
+                                                      bUnPack(a_unPack)
 
     {
     }
@@ -464,7 +501,9 @@ typedef struct
 {
     UINT16 u2PreviewWidth;
     UINT16 u2PreviewHeight;
+    UINT16 u16PreviewTestPatEn;
     Func_CB fpPrvCB;
+    eACDK_OPERA_MODE eOperaMode;
 }ACDK_CCT_CAMERA_PREVIEW_STRUCT, *PACDK_CCT_CAMERA_PREVIEW_STRUCT;
 
 

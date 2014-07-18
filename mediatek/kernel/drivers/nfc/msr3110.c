@@ -125,6 +125,17 @@ static int nfc_remove(struct i2c_client *client);
 
 void msr3110_dev_irq_handler(void);
 
+static void msr3110_dev_irq_pin_ctrl( u8 IrqPinMode);
+
+typedef enum 
+{
+  NFC_IRQ_PIN_CTRL_INIT            = 0x00,
+  NFC_IRQ_PIN_CTRL_IRQ_MODE        = 0x01,
+  NFC_IRQ_PIN_CTRL_PULL_HIGH       = 0x02,
+  NFC_IRQ_PIN_CTRL_PULL_LOW        = 0x03
+ } NFC_IRQ_PIN_CTRL; 
+
+
 
 static int nfc_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
@@ -404,6 +415,8 @@ end:
 #define MSR3110_IOCTL_IRQ_ABORT          _IOW( MSR3110_DEV_MAGIC_ID, 0x04, int)
 #define MSR3110_IOCTL_IRQ_REG            _IOW( MSR3110_DEV_MAGIC_ID, 0x05, int)
 #define MSR3110_IOCTL_CHIP_DETECT        _IOW( MSR3110_DEV_MAGIC_ID, 0x06, int)
+#define MSR3110_IOCTL_DRIVER_INIT        _IOW( MSR3110_DEV_MAGIC_ID, 0x07, int)
+
 
 
 #define MSR3110_IOCTL_ISP_READ_REG       _IOW( MSR3110_DEV_MAGIC_ID, 0xA1, int)
@@ -1073,6 +1086,8 @@ typedef enum
 	NFC_CHIP_DETECT_STS_SUCCESS  = 0x01
 } NFC_CHIP_DETECT_STS;
 
+
+int gMsr3110ChipDetectStatus = NFC_CHIP_DETECT_STS_FAIL;
 static long msr3110_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	long retVal = 0;
@@ -1226,6 +1241,7 @@ static long msr3110_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long
 
 			if( retVal != NFC_IRQ_STS_WAIT)
 			{
+                mutex_unlock( &g_msr3110_dev->mutex_ioctl_irq);
 				my_pr_err( "%s IRQ_ABORT canceled. local irq_flag: %d", __func__, retVal);
 				my_pr_err( "%s IRQ_ABORT canceled. global irq_flag: %d", __func__, g_msr3110_dev->irq_flag);
 				goto end;								
@@ -1247,10 +1263,11 @@ static long msr3110_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long
 		case MSR3110_IOCTL_IRQ_REG:   // IRQ Registration
 			my_pr_debug( "%s MSR3110_IOCTL_IRQ_REG ", __func__); 
 			
-			mt65xx_eint_set_sens(CUST_EINT_EXT_IRQ_NFC_NUM, CUST_EINT_EXT_IRQ_NFC_SENSITIVE);
-			mt65xx_eint_set_hw_debounce(CUST_EINT_EXT_IRQ_NFC_NUM, CUST_EINT_EXT_IRQ_NFC_DEBOUNCE_CN);
-			mt65xx_eint_registration(CUST_EINT_EXT_IRQ_NFC_NUM, CUST_EINT_EXT_IRQ_NFC_DEBOUNCE_EN, CUST_EINT_EXT_IRQ_NFC_POLARITY, msr3110_dev_irq_handler, 0);
-			mt65xx_eint_mask( CUST_EINT_EXT_IRQ_NFC_NUM);
+			msr3110_dev_irq_pin_ctrl( NFC_IRQ_PIN_CTRL_IRQ_MODE);
+			//mt65xx_eint_set_sens(CUST_EINT_EXT_IRQ_NFC_NUM, CUST_EINT_EXT_IRQ_NFC_SENSITIVE);
+			//mt65xx_eint_set_hw_debounce(CUST_EINT_EXT_IRQ_NFC_NUM, CUST_EINT_EXT_IRQ_NFC_DEBOUNCE_CN);
+			//mt65xx_eint_registration(CUST_EINT_EXT_IRQ_NFC_NUM, CUST_EINT_EXT_IRQ_NFC_DEBOUNCE_EN, CUST_EINT_EXT_IRQ_NFC_POLARITY, msr3110_dev_irq_handler, 0);
+			//mt65xx_eint_mask( CUST_EINT_EXT_IRQ_NFC_NUM);
             
 			retVal = NFC_IRQ_STS_SUCCESS;
 
@@ -1259,8 +1276,50 @@ static long msr3110_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long
 		case MSR3110_IOCTL_CHIP_DETECT:
 			my_pr_debug( "%s MSR3110_IOCTL_CHIP_DETECT ", __func__);
 
+			if( gMsr3110ChipDetectStatus == NFC_CHIP_DETECT_STS_SUCCESS)
+			{
+				retVal = gMsr3110ChipDetectStatus;
+				break;
+			}
+
+			mt_set_gpio_out(GPIO_NFC_VENB_PIN, GPIO_OUT_ZERO);
+			mdelay( 50);
+			msr3110_dev_irq_pin_ctrl( NFC_IRQ_PIN_CTRL_PULL_LOW);
+			mt_set_gpio_out(GPIO_NFC_VENB_PIN, GPIO_OUT_ONE);
+			mdelay( 200);
+
 			retVal = SerialFlash_DisableWDT();
-						
+			if( retVal == NFC_CHIP_DETECT_STS_SUCCESS)
+			{
+				gMsr3110ChipDetectStatus = NFC_CHIP_DETECT_STS_SUCCESS;
+			}
+
+			mt_set_gpio_out(GPIO_NFC_VENB_PIN, GPIO_OUT_ZERO);
+			mdelay( 200);
+			msr3110_dev_irq_pin_ctrl( NFC_IRQ_PIN_CTRL_PULL_HIGH);
+			msr3110_dev_irq_pin_ctrl( NFC_IRQ_PIN_CTRL_IRQ_MODE);			
+					
+			break;
+
+		case MSR3110_IOCTL_DRIVER_INIT: 
+			my_pr_debug( "%s MSR3110_IOCTL_DRIVER_INIT ", __func__); 
+
+			// GPIO Initial: IRQ_nfc
+			msr3110_dev_irq_pin_ctrl( NFC_IRQ_PIN_CTRL_IRQ_MODE);
+
+			// GPIO Initial: VEN	
+			mt_set_gpio_mode( GPIO_NFC_VENB_PIN, GPIO_NFC_VENB_PIN_M_GPIO);
+			mt_set_gpio_dir( GPIO_NFC_VENB_PIN, GPIO_DIR_OUT);
+
+			// GPIO Initial: RST 	
+			mt_set_gpio_mode( GPIO_NFC_RST_PIN, GPIO_NFC_RST_PIN_M_GPIO);
+			mt_set_gpio_dir( GPIO_NFC_RST_PIN, GPIO_DIR_OUT);
+
+			mt_set_gpio_out( GPIO_NFC_VENB_PIN, GPIO_OUT_ZERO);
+			mt_set_gpio_out( GPIO_NFC_RST_PIN, GPIO_OUT_ZERO);			
+            
+			retVal = NFC_IRQ_STS_SUCCESS;
+
 			break;
 
 		case MSR3110_IOCTL_ISP_READ_REG:
@@ -1437,6 +1496,45 @@ void msr3110_dev_irq_handler(void)
 
 
 
+static void msr3110_dev_irq_pin_ctrl( u8 IrqPinMode)
+{
+	FUNC_START();
+	
+	switch( IrqPinMode)
+	{
+		case NFC_IRQ_PIN_CTRL_IRQ_MODE:
+			mt_set_gpio_mode( GPIO_IRQ_NFC_PIN, GPIO_IRQ_NFC_PIN_M_EINT);
+			mt_set_gpio_dir( GPIO_IRQ_NFC_PIN, GPIO_DIR_IN);
+			mt_set_gpio_pull_enable( GPIO_IRQ_NFC_PIN, GPIO_PULL_ENABLE);
+			mt_set_gpio_pull_select( GPIO_IRQ_NFC_PIN, GPIO_PULL_UP);
+
+			mt65xx_eint_set_sens(CUST_EINT_EXT_IRQ_NFC_NUM, CUST_EINT_EXT_IRQ_NFC_SENSITIVE);
+			mt65xx_eint_set_hw_debounce(CUST_EINT_EXT_IRQ_NFC_NUM, CUST_EINT_EXT_IRQ_NFC_DEBOUNCE_CN);
+			mt65xx_eint_registration(CUST_EINT_EXT_IRQ_NFC_NUM, CUST_EINT_EXT_IRQ_NFC_DEBOUNCE_EN, CUST_EINT_EXT_IRQ_NFC_POLARITY, msr3110_dev_irq_handler, 0);
+			mt65xx_eint_mask( CUST_EINT_EXT_IRQ_NFC_NUM);
+	
+			break;
+		case NFC_IRQ_PIN_CTRL_PULL_HIGH:
+			mt_set_gpio_mode( GPIO_IRQ_NFC_PIN, GPIO_IRQ_NFC_PIN_M_GPIO);
+			mt_set_gpio_dir( GPIO_IRQ_NFC_PIN, GPIO_DIR_OUT);
+			mt_set_gpio_out( GPIO_IRQ_NFC_PIN, GPIO_OUT_ONE);
+
+			break;
+		case NFC_IRQ_PIN_CTRL_PULL_LOW:
+			mt_set_gpio_mode( GPIO_IRQ_NFC_PIN, GPIO_IRQ_NFC_PIN_M_GPIO);
+			mt_set_gpio_dir( GPIO_IRQ_NFC_PIN, GPIO_DIR_OUT);
+			mt_set_gpio_out( GPIO_IRQ_NFC_PIN, GPIO_OUT_ZERO);
+
+			break;
+		default:
+			my_pr_err( "%s FAIL unknown irq pin mode", __func__);
+			break;
+	}
+
+	FUNC_END();		
+}
+
+
 static int __init msr3110_dev_init(void)
 {
 	int retVal = 0;
@@ -1497,6 +1595,11 @@ static int __init msr3110_dev_init(void)
 	// GPIO Initial: IRQ	
 
 #if 1 // 0: ROM mode 
+
+
+	msr3110_dev_irq_pin_ctrl( NFC_IRQ_PIN_CTRL_IRQ_MODE);
+
+	#if 0
 	my_pr_debug( "%s mt_get_gpio_mode(%d): %d", __func__, GPIO_IRQ_NFC_PIN_M_EINT, mt_get_gpio_mode(GPIO_IRQ_NFC_PIN));
 	my_pr_debug( "%s mt_get_gpio_dir(%d): %d", __func__, GPIO_DIR_IN, mt_get_gpio_dir(GPIO_IRQ_NFC_PIN));
 	my_pr_debug( "%s mt_get_gpio_pull_enable(%d): %d", __func__, GPIO_PULL_ENABLE, mt_get_gpio_pull_enable(GPIO_IRQ_NFC_PIN));
@@ -1523,17 +1626,18 @@ static int __init msr3110_dev_init(void)
 	my_pr_debug( "%s 2. mt_get_gpio_dir(%d): %d", __func__, GPIO_DIR_IN, mt_get_gpio_dir(GPIO_IRQ_NFC_PIN));
 	my_pr_debug( "%s 2. mt_get_gpio_pull_enable(%d): %d", __func__, GPIO_PULL_ENABLE, mt_get_gpio_pull_enable(GPIO_IRQ_NFC_PIN));
 	my_pr_debug( "%s 2. mt_get_gpio_pull_select(%d): %d", __func__, GPIO_PULL_UP, mt_get_gpio_pull_select(GPIO_IRQ_NFC_PIN));
-	
+#endif
 
 	
 #else 
+
+	msr3110_dev_irq_pin_ctrl( NFC_IRQ_PIN_CTRL_PULL_LOW);
+	#if 0
 	mt_set_gpio_mode( GPIO_IRQ_NFC_PIN, GPIO_IRQ_NFC_PIN_M_GPIO);
 	mt_set_gpio_dir( GPIO_IRQ_NFC_PIN, GPIO_DIR_OUT);
+	mt_set_gpio_out( GPIO_IRQ_NFC_PIN, GPIO_OUT_ZERO);
+#endif
 
-	//mt_set_gpio_out( GPIO_IRQ_NFC_PIN, GPIO_OUT_ZERO);
-
-	mt_set_gpio_mode( GPIO_NFC_EINT_PIN, GPIO_NFC_EINT_PIN_M_GPIO);
-	mt_set_gpio_dir( GPIO_NFC_EINT_PIN, GPIO_DIR_OUT);
 #endif
 
 	// GPIO Initial: VEN	

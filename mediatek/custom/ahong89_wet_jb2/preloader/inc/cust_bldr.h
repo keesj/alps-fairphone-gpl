@@ -22,7 +22,7 @@
 
 #define CFG_LOG_BAUDRATE            (921600)
 #define CFG_META_BAUDRATE           (115200)
-#define CFG_UART_LOG                (UART1)
+#define CFG_UART_LOG                (UART4) //(UART1)   ghong tyang
 #define CFG_UART_META               (UART1)
 
 #define CFG_EMERGENCY_DL_SUPPORT    (1)

@@ -41,7 +41,16 @@ typedef struct{
 #define USB_CHARGER_CURRENT_UNCONFIGURED	Cust_CC_70MA	// def CONFIG_USB_IF
 #define USB_CHARGER_CURRENT_CONFIGURED		Cust_CC_450MA	// def CONFIG_USB_IF
 #define USB_CHARGER_CURRENT					Cust_CC_450MA
-#define AC_CHARGER_CURRENT					Cust_CC_650MA	
+#define AC_CHARGER_CURRENT					Cust_CC_900MA	
+
+//#define  bq24158_AC_CHARGING_CURRENT_1250
+//#define  bq24158_AC_CHARGING_CURRENT_1150
+//#define  bq24158_AC_CHARGING_CURRENT_1050
+//#define  bq24158_AC_CHARGING_CURRENT_950	//ghong hhongyan 20130816
+//#define  bq24158_AC_CHARGING_CURRENT_850
+#define  bq24158_AC_CHARGING_CURRENT_750
+
+#define HIGH_BATTERY_VOLTAGE_SUPPORT    //w33 support
 
 /* Battery Meter Solution */
 #define CONFIG_ADC_SOLUTION 	1
@@ -50,21 +59,21 @@ typedef struct{
 VBAT_TO_PERCENT Batt_VoltToPercent_Table[] = {
 	/*BattVolt,BattPercent*/
 	{3400,0},
-	{3641,10},
-	{3708,20},
-	{3741,30},
-	{3765,40},
-	{3793,50},
-	{3836,60},
-	{3891,70},
-	{3960,80},
-	{4044,90},
-	{4183,100},
+	{3686,10},
+	{3740,20},
+	{3771,30},
+	{3789,40},
+	{3820,50},
+	{3873,60},
+	{3943,70},
+	{4013,80},
+	{4100,90},
+	{4189,100},
 };
 
 /* Precise Tunning */
-#define BATTERY_AVERAGE_SIZE 	30
-//#define BATTERY_AVERAGE_SIZE   3
+//#define BATTERY_AVERAGE_SIZE 	30
+#define BATTERY_AVERAGE_SIZE   	6			//12			//modify by xchangwei 20140506		
 
 /* Common setting */
 #define R_CURRENT_SENSE 2				// 0.2 Ohm
@@ -78,15 +87,16 @@ VBAT_TO_PERCENT Batt_VoltToPercent_Table[] = {
 #define V_CHARGER_ENABLE 0				// 1:ON , 0:OFF
 
 /* Teperature related setting */
-#define RBAT_PULL_UP_R             39000
-#define RBAT_PULL_UP_VOLT          1800
+#define RBAT_PULL_UP_R             24000
+//#define RBAT_PULL_UP_VOLT          2500
+#define RBAT_PULL_UP_VOLT          1200
 //#define TBAT_OVER_CRITICAL_LOW     68237
 //#define TBAT_OVER_CRITICAL_LOW     483954
-#define TBAT_OVER_CRITICAL_LOW     67790
-#define BAT_TEMP_PROTECT_ENABLE    1
+#define TBAT_OVER_CRITICAL_LOW     70603
+#define BAT_TEMP_PROTECT_ENABLE    0
 #define BAT_NTC_10 0
 #define BAT_NTC_47 0
-#define BAT_NTC_CG103JF103F
+#define BAT_NTC_TSM_1
 
 /* Battery Notify */
 #define BATTERY_NOTIFY_CASE_0001

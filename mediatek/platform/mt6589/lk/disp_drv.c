@@ -690,12 +690,21 @@ DISP_STATUS DISP_PowerEnable(BOOL enable)
 
 	is_engine_in_suspend_mode = enable ? FALSE : TRUE;
 
+    if (enable && lcm_drv && lcm_drv->resume_power)
+    {
+        lcm_drv->resume_power();
+    }
+
 	ret = (disp_drv->enable_power) ?
 		(disp_drv->enable_power(enable)) :
 		DISP_STATUS_NOT_IMPLEMENTED;
 
     if (enable) {
         DAL_OnDispPowerOn();
+    }
+    else if (lcm_drv && lcm_drv->suspend_power)
+    {
+        lcm_drv->suspend_power();
     }
 	
 	up(&sem_update_screen);

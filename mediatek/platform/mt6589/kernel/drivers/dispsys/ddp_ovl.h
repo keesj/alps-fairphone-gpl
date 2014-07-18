@@ -60,6 +60,7 @@ typedef struct _OVL_CONFIG_STRUCT
     int buff_idx;
     int identity;
     int connected_type;
+    unsigned int security;
 }OVL_CONFIG_STRUCT;
 
 

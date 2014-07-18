@@ -18,7 +18,7 @@ const NVRAM_LENS_PARA_STRUCT FM50AF_LENS_PARA_DEFAULT_VALUE =
     // AF NVRAM
     {
         // -------- AF ------------
-        {202, // i4Offset
+        {20, // i4Offset    //202   tyang
           9, // i4NormalNum
           12, // i4MacroNum
            0, // i4InfIdxOffset
@@ -56,7 +56,7 @@ const NVRAM_LENS_PARA_STRUCT FM50AF_LENS_PARA_DEFAULT_VALUE =
          },
          
          // -------- ZSD AF ------------
-         {202, // i4Offset
+         {20, // i4Offset
            9, // i4NormalNum
            12, // i4MacroNum
             0, // i4InfIdxOffset
@@ -94,7 +94,7 @@ const NVRAM_LENS_PARA_STRUCT FM50AF_LENS_PARA_DEFAULT_VALUE =
            }, 
            
            // -------- VAFC ------------
-         {200, // i4Offset
+         {20, // i4Offset
            20, // i4NormalNum
            20, // i4MacroNum
             0, // i4InfIdxOffset

@@ -261,7 +261,8 @@ getAWBStatParam()
        	0xFFF, // Maximum limit clipping for B color
 
         // AWB error threshold
-       	0 // Programmable threshold for the allowed total over-exposed and under-exposed pixels in one main stat window
+        //Ghong xchangwei edit @20131024 default: 0
+       	30 // Programmable threshold for the allowed total over-exposed and under-exposed pixels in one main stat window
     };
 
     return (rAWBStatParam);

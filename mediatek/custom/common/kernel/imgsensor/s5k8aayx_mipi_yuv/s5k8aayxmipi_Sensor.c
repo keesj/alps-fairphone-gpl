@@ -1,3 +1,68 @@
+
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein          
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ */
+/* MediaTek Inc. (C) 2010. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ */   
+/*****************************************************************************
+*  Copyright Statement:
+*  --------------------
+*  This software is protected by Copyright and the information contained
+*  herein is confidential. The software may not be copied and the information
+*  contained herein may not be used or disclosed except with the written
+*  permission of MediaTek Inc. (C) 2008
+*
+*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
+*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
+*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
+*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
+*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+*
+*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
+*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
+*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+*
+*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
+*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
+*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
+*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
+*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
+*
+*****************************************************************************/
 /*****************************************************************************
  *
  * Filename:
@@ -81,6 +146,8 @@
 #else
 #define SENSORDB(x,...)
 #endif
+
+#define S5K8AAYX_TEST_PATTERN_CHECKSUM (0x7d732767)
 
 typedef struct
 {
@@ -7897,6 +7964,61 @@ UINT32 S5K8AAYXMIPIGetDefaultFramerateByScenario(MSDK_SCENARIO_ID_ENUM scenarioI
 	return ERROR_NONE;
 }
 
+UINT32 S5K8AAYXSetTestPatternMode(kal_bool bEnable)
+{
+    SENSORDB("[S5K8AAYXSetTestPatternMode] Test pattern enable:%d\n", bEnable);
+
+	if(bEnable) 
+	{
+        //fix AE/AWB output setting
+        S5K8AAYX_MIPI_write_cmos_sensor(0xFCFC,0xD000);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x3700,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x3E00,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x4300,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x4400,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x4500,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x4600,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x4700,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x6000,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x6100,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x6330,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x6400,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x6500,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x6700,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x6800,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x6A00,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x6B00,0x0001);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x4100,0x0001);
+        
+        //Output test pattern mode setting
+        //0x0002 - solid color
+        S5K8AAYX_MIPI_write_cmos_sensor(0x3602,0x1F40);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x3604,0x1A40);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x3606,0x1A40);
+        S5K8AAYX_MIPI_write_cmos_sensor(0x3608,0x1040);
+        //0x0004 - gradient
+        S5K8AAYX_MIPI_write_cmos_sensor(0x360a,0x0383);
+        //Address: D0003600
+        //0x0000 -- bypass
+        //0x0002 - solid color
+        //0x0004 - gradient
+        //0x0006 - address dependent noise
+        //0x0008 - random
+        //0x000A - gradient + address dependent noise
+        //0x000C - gradient + random
+        //0x000E - out pixel attributes
+        S5K8AAYX_MIPI_write_cmos_sensor(0x3600,0x0004);
+
+        mdelay(100);
+
+	}
+	else        
+	{
+		S5K8AAYX_MIPI_write_cmos_sensor(0x3600,0x0000);	
+	}
+    return ERROR_NONE;
+}
+
 UINT32 S5K8AAYX_MIPIFeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
 							 UINT8 *pFeaturePara,UINT32 *pFeatureParaLen)
 {
@@ -8032,6 +8154,14 @@ UINT32 S5K8AAYX_MIPIFeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
 		case SENSOR_FEATURE_GET_AE_AWB_LOCK_INFO:
 			S5K8AAYX_MIPIGetAEAWBLock((*pFeatureData32),*(pFeatureData32+1));
 			break;
+        case SENSOR_FEATURE_SET_TEST_PATTERN://for factory mode auto testing    
+            S5K8AAYXSetTestPatternMode((BOOL)*pFeatureData16);
+            break;
+        case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE://for factory mode auto testing             
+            *pFeatureReturnPara32= S5K8AAYX_TEST_PATTERN_CHECKSUM;           
+            *pFeatureParaLen=4;                             
+            break;
+
 		default:
 			break;			
 	}

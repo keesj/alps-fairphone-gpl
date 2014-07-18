@@ -62,6 +62,14 @@ class AudioMTKStreamInManager
         * @return status_t*/
         virtual void SetInputMute(bool bEnable);
 
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+		/**
+        * this function is get record drop time 
+        * @return status_t*/
+        uint32 GetRecordDropTime();
+		void BackupRecordDropTime(uint32 droptime);
+#endif
+		
         status_t I2SAdcInSet(AudioDigtalI2S *AdcI2SIn, AudioStreamAttribute *AttributeClient);
         status_t Set2ndI2SIn(AudioDigtalI2S *m2ndI2SIn, unsigned int mSampleRate);
         status_t Enable2ndI2SIn(bool bEnable);
@@ -84,6 +92,12 @@ class AudioMTKStreamInManager
         
         void ClearFSync();
         bool GetFSyncFlag();
+		
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+		timespec GetSystemTime(bool print = 0);
+		unsigned long long ProcessTimeCheck(struct timespec StartTime, struct timespec EndTime);
+		unsigned long long mMaxProcessTime;
+#endif		
 
 #ifdef MTK_DIGITAL_MIC_SUPPORT
 		static const uint32 MemVULSamplerate  = 32000;
@@ -112,6 +126,12 @@ class AudioMTKStreamInManager
                 void DropRecordData();
 
                 static int DumpFileNum;
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+				struct timespec mEnterTime;
+			    struct timespec mFinishtime;
+				bool mStart;
+				unsigned long long readperiodtime;
+#endif					
             private:
                 int mFd;
                 int mMemType;
@@ -141,13 +161,18 @@ class AudioMTKStreamInManager
 #endif
 
 		void PreLoadHDRecParams(void);
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+		uint32_t BesRecordProcess(AudioMTKStreamInClient *Client, void *buffer , uint32 copy_size);
+#endif
         AudioDigitalControlInterface *mAudioDigital;
         AudioAnalogControlInterface *mAudioAnalog;
         AudioResourceManagerInterface *mAudioResourceManager;
 	    AudioDigitalDAIBT *mDaiBt;
         uint32_t mMode;
         uint32_t mClientNumber ;
-
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT		
+		uint32_t mBackUpRecordDropTime;
+#endif
         KeyedVector<uint32_t, AudioMTKStreamInClient *> mAudioInput; // vector to save current recording client
 
         AudioDigtalI2S mAdcI2SIn;

@@ -1,3 +1,63 @@
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ */
+/* MediaTek Inc. (C) 2010. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
+
+/********************************************************************************************
+ *     LEGAL DISCLAIMER
+ *
+ *     (Header of MediaTek Software/Firmware Release or Documentation)
+ *
+ *     BY OPENING OR USING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ *     THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE") RECEIVED
+ *     FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON AN "AS-IS" BASIS
+ *     ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES, EXPRESS OR IMPLIED,
+ *     INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+ *     A PARTICULAR PURPOSE OR NONINFRINGEMENT. NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY
+ *     WHATSOEVER WITH RESPECT TO THE SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY,
+ *     INCORPORATED IN, OR SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK
+ *     ONLY TO SUCH THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
+ *     NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S SPECIFICATION
+ *     OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+ *
+ *     BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE LIABILITY WITH
+ *     RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE, AT MEDIATEK'S OPTION,
+TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE, OR REFUND ANY SOFTWARE LICENSE
+ *     FEES OR SERVICE CHARGE PAID BY BUYER TO MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ *     THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE WITH THE LAWS
+ *     OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF LAWS PRINCIPLES.
+ ************************************************************************************************/
 #define LOG_TAG "ae_cct_feature"
 
 #ifndef ENABLE_MY_LOG
@@ -151,11 +211,8 @@ AeMgr::CCTOPAEApplyExpParam(
 {
     MY_LOG("[ACDK_CCT_V2_OP_AE_APPLY_EXPO_INFO]\n");
 
-
     ACDK_AE_MODE_CFG_T *pAEExpParam = (ACDK_AE_MODE_CFG_T *)a_pAEExpParam;
     MUINT32 u4AFEGain = 0, u4IspGain = 1024, u4BinningRatio = 1;
-
-    MY_LOG("[ACDK_CCT_V2_OP_AE_APPLY_EXPO_INFO]\n");
 
     // Set exposure mode
     g_rAEOutput.rPreviewMode.u4ExposureMode = pAEExpParam->u4ExposureMode;
@@ -181,11 +238,13 @@ AeMgr::CCTOPAEApplyExpParam(
     ISP_MGR_OBC_T::getInstance((ESensorDev_T)m_i4SensorDev).setIspAEGain(g_rAEOutput.rPreviewMode.u4IspGain>>1);
 
     // Set flare
-	if((m_pIAeAlgo != NULL)&&(!pAEExpParam->bFlareAuto)) {
-
-		m_pIAeAlgo->SetPreviewFlareValue( pAEExpParam->u2FlareValue);
-		m_pIAeAlgo->SetCaptureFlareValue(pAEExpParam->u2CaptureFlareValue);
-	}
+    if((m_pIAeAlgo != NULL)&&(!pAEExpParam->bFlareAuto)) {
+        MY_LOG("[CCTOPAEApplyExpParam] u2FlareValue = %d u2CaptureFlareValue:%d\n", pAEExpParam->u2FlareValue, pAEExpParam->u2CaptureFlareValue);    
+        m_pIAeAlgo->SetPreviewFlareValue( pAEExpParam->u2FlareValue);
+        m_pIAeAlgo->SetCaptureFlareValue(pAEExpParam->u2CaptureFlareValue);
+    } else {
+        MY_LOG("[CCTOPAEApplyExpParam] m_pIAeAlgo = %d bFlareAuto:%d\n", m_pIAeAlgo, pAEExpParam->bFlareAuto);        
+    }
 
     g_rAEOutput.rPreviewMode.i2FlareOffset = pAEExpParam->u2FlareValue;
     g_rAEOutput.rPreviewMode.i2FlareGain = (MINT16)(FLARE_SCALE_UNIT * FLARE_OFFSET_DOMAIN / (FLARE_OFFSET_DOMAIN  - pAEExpParam->u2FlareValue));
@@ -232,6 +291,7 @@ AeMgr::CCTOPAEApplyExpParam(
     MY_LOG("[PV Flare Gain] = %d\n", pAEExpParam->u2FlareGain);
     MY_LOG("[CAP Flare] = %d\n", pAEExpParam->u2CaptureFlareValue);
     MY_LOG("[CAP Flare Gain] = %d\n", pAEExpParam->u2CaptureFlareGain);
+    MY_LOG("[Flare Auto] = %d\n", pAEExpParam->bFlareAuto);
 
     return S_AE_OK;
 }
@@ -266,14 +326,14 @@ AeMgr::CCTOSetCaptureParams(
     cap_mode.u4RealISO = pcfg_in->u4ISO;
 
     // Set flare
-	if((m_pIAeAlgo != NULL)&&(!pcfg_in->bFlareAuto))
-		m_pIAeAlgo->SetCaptureFlareValue(pcfg_in->u2CaptureFlareValue);
+    if((m_pIAeAlgo != NULL)&&(!pcfg_in->bFlareAuto))
+        m_pIAeAlgo->SetCaptureFlareValue(pcfg_in->u2CaptureFlareValue);
 
     cap_mode.i2FlareOffset = pcfg_in->u2CaptureFlareValue;
-    cap_mode.i2FlareGain = pcfg_in->u2CaptureFlareGain;
+    cap_mode.i2FlareGain = (MINT16)(FLARE_SCALE_UNIT * FLARE_OFFSET_DOMAIN / (FLARE_OFFSET_DOMAIN - pcfg_in->u2CaptureFlareValue)); //pcfg_in->u2CaptureFlareGain;
 
-    g_rAEOutput.rCaptureMode[0].i2FlareOffset = (MUINT32)pcfg_in->u2FlareValue;
-    g_rAEOutput.rCaptureMode[0].i2FlareGain = pcfg_in->u2CaptureFlareGain;
+    g_rAEOutput.rCaptureMode[0].i2FlareOffset = cap_mode.i2FlareOffset;
+    g_rAEOutput.rCaptureMode[0].i2FlareGain = cap_mode.i2FlareGain;
 
     g_bIsAutoFlare = pcfg_in->bFlareAuto;
 
@@ -285,6 +345,7 @@ AeMgr::CCTOSetCaptureParams(
     MY_LOG("[CCTOSetCaptureParams] -- Cap. ISO = %d\n", cap_mode.u4RealISO);
     MY_LOG("[CCTOSetCaptureParams] -- Cap. Flare Offset = %d\n", cap_mode.i2FlareOffset);
     MY_LOG("[CCTOSetCaptureParams] -- Cap. Flare Gain = %d\n", cap_mode.i2FlareGain);
+    MY_LOG("[CCTOSetCaptureParams] -- Flare Auto = %d\n", g_bIsAutoFlare);
 
     updateCaptureParams(cap_mode);
 
@@ -314,6 +375,7 @@ AeMgr::CCTOGetCaptureParams(
     MY_LOG("[CCTOGetCaptureParams] -- Cap ISO = %d\n", ae_mode.u4RealISO);
     MY_LOG("[CCTOGetCaptureParams] -- Cap Flare Offset = %d\n", ae_mode.i2FlareOffset);
     MY_LOG("[CCTOGetCaptureParams] -- Cap Flare Gain = %d\n", ae_mode.i2FlareGain);
+    MY_LOG("[CCTOGetCaptureParams] -- Flare Auto = %d\n", g_bIsAutoFlare);
 
     pout_cfg->u4ExposureMode = ae_mode.u4ExposureMode;
     pout_cfg->u4Eposuretime = ae_mode.u4Eposuretime;
@@ -399,6 +461,7 @@ AeMgr::CCTOPAEGetExpParam(
     MY_LOG("[PV Flare Gain] = %d\n", pAEExpParamOut->u2FlareGain);
     MY_LOG("[CAP Flare] = %d\n", pAEExpParamOut->u2CaptureFlareValue);
     MY_LOG("[CAP Flare Gain] = %d\n", pAEExpParamOut->u2CaptureFlareGain);
+    MY_LOG("[Flare Auto] = %d\n", g_bIsAutoFlare);
 
     return S_AE_OK;
 }
@@ -789,6 +852,8 @@ AeMgr::CCTOPAESetCaptureMode(
             if(m_pIAeAlgo != NULL) {
                 m_pIAeAlgo->handleAE(&rAEInput, &rAEOutput);
                 copyAEInfo2mgr(&g_rAEOutput.rPreviewMode, &rAEOutput);
+                g_rAEOutput.rPreviewMode.i2FlareOffset = g_u4PreviewFlareOffset;
+                g_rAEOutput.rPreviewMode.i2FlareGain = (MINT16)(FLARE_SCALE_UNIT * FLARE_OFFSET_DOMAIN / (FLARE_OFFSET_DOMAIN  - g_u4PreviewFlareOffset));
             } else {
                 MY_LOG("The AE algo class is NULL (15)\n");
             }            

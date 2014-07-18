@@ -1,3 +1,64 @@
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ */
+/* MediaTek Inc. (C) 2010. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
+
+/********************************************************************************************
+ *     LEGAL DISCLAIMER
+ *
+ *     (Header of MediaTek Software/Firmware Release or Documentation)
+ *
+ *     BY OPENING OR USING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ *     THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE") RECEIVED
+ *     FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON AN "AS-IS" BASIS
+ *     ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES, EXPRESS OR IMPLIED,
+ *     INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+ *     A PARTICULAR PURPOSE OR NONINFRINGEMENT. NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY
+ *     WHATSOEVER WITH RESPECT TO THE SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY,
+ *     INCORPORATED IN, OR SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK
+ *     ONLY TO SUCH THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
+ *     NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S SPECIFICATION
+ *     OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+ *
+ *     BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE LIABILITY WITH
+ *     RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE, AT MEDIATEK'S OPTION,
+TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE, OR REFUND ANY SOFTWARE LICENSE
+ *     FEES OR SERVICE CHARGE PAID BY BUYER TO MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ *     THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE WITH THE LAWS
+ *     OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF LAWS PRINCIPLES.
+ ************************************************************************************************/
+
 #define LOG_TAG "MtkCam/FBShot"
 //
 #include "Facebeauty.h"
@@ -5,6 +66,7 @@
 #include <common/camutils/CamFormat.h>
 #include <featureio/fd_hal_base.h>
 #include <sys/stat.h>
+#include <camera/MtkCamera.h>
 
 #define SmallFaceWidthThreshold 40
 #define BigFaceWidthThreshold 60
@@ -68,7 +130,7 @@ createNormalShot(char const*const pszShotName,
     if  ( pShot == 0 ) {
         CAM_LOGE("[%s] NormalShot new IShot", __FUNCTION__);
         goto lbExit;
-    }   
+    }
 lbExit:
     //  Free all resources if this function fails.
     if  ( pShot == 0 && pImpShot != 0 ) {
@@ -76,10 +138,10 @@ lbExit:
         pImpShot = NULL;
     }
 
-    return  pShot;     
+    return  pShot;
 }
 
-sp<IShot> 
+sp<IShot>
 createFBShot(char const*const pszShotName,
     uint32_t const u4ShotMode,
     int32_t const i4OpenId,
@@ -111,26 +173,26 @@ createFBShot(char const*const pszShotName,
         goto lbExit;
     }
 
-    
+
 lbExit:
     //
     int LS = iSmoothLevel;
     int LC = iSkinColor;
-    int LW = iSharp;    
+    int LW = iSharp;
     //(3)  tuning parameter
-    LS+=5;    
-    LC+=5;    
+    LS+=5;
+    LC+=5;
     LW+=5;
-      
+
     pImpShot->mSmoothLevel = LS;
     pImpShot->mBrightLevel = LC;
     pImpShot->mRuddyLevel = 10-LC;
     pImpShot->mWarpLevel = LW;
     pImpShot->mContrastLevel = 5;
-    
+
     if(pImpShot->mRuddyLevel<3)
         pImpShot->mRuddyLevel = 3;
-        
+
     //  Free all resources if this function fails.
     if  ( pShot == 0 && pImpShot != 0 ) {
         pImpShot->onDestroy();
@@ -144,14 +206,14 @@ sp<IShot>
 createInstance_FaceBeautyShot(
     char const*const    pszShotName,
     uint32_t const      u4ShotMode,
-    int32_t const       i4OpenId, 
-    int32_t const       iSmoothLevel, 
-    int32_t const       iSkinColor, 
+    int32_t const       i4OpenId,
+    int32_t const       iSmoothLevel,
+    int32_t const       iSkinColor,
     int32_t const       iSharp
 )
-{       
+{
     MtkCameraFaceMetadata FaceInfo;
-    MtkCameraFace FBFaceInfo[15];  
+    MtkCameraFace FBFaceInfo[15];
     MtkFaceInfo MTKPoseInfo[15];
     FaceInfo.faces=(MtkCameraFace *)FBFaceInfo;
     FaceInfo.posInfo=(MtkFaceInfo *)MTKPoseInfo;
@@ -159,10 +221,10 @@ createInstance_FaceBeautyShot(
     // Get FD info
     //Create FD object and get FD result info
     //************************
-    halFDBase* fdobj = halFDBase::createInstance(HAL_FD_OBJ_FDFT_SW); 
+    halFDBase* fdobj = halFDBase::createInstance(HAL_FD_OBJ_FDFT_SW);
     fdobj->halFDGetFaceInfo(&FaceInfo);
     fdobj->destroyInstance();
-    //FaceInfo.number_of_faces = FdResult_Num; 
+    //FaceInfo.number_of_faces = FdResult_Num;
     CAM_LOGD("[createInstance_FaceBeautyShot] number_of_faces %d ",FaceInfo.number_of_faces);
     CAM_LOGD("[createInstance_FaceBeautyShot] smooth-level=%d, skin-color=%d, sharp=%d", iSmoothLevel, iSkinColor, iSharp);
 
@@ -170,7 +232,7 @@ createInstance_FaceBeautyShot(
     //for(int i=0;i< 15;i++)
     //{
     //     FaceInfo.faces[i].rect[0] = FdResult[i].rect[0];
-    //     FaceInfo.faces[i].rect[1] = FdResult[i].rect[1]; 
+    //     FaceInfo.faces[i].rect[1] = FdResult[i].rect[1];
     //     FaceInfo.faces[i].rect[2] = FdResult[i].rect[2];
     //     FaceInfo.faces[i].rect[3] = FdResult[i].rect[3];
     //     FaceInfo.faces[i].score = FdResult[i].score;
@@ -180,56 +242,56 @@ createInstance_FaceBeautyShot(
     //}
 
     //************************
-        
+
     #ifdef Debug_Mode
-    FaceInfo.faces[0].rect[0] = -350; 
-    FaceInfo.faces[0].rect[1] = 58; 
-    FaceInfo.faces[0].rect[2] = 225;  
-    FaceInfo.faces[0].rect[3] = 825;            
+    FaceInfo.faces[0].rect[0] = -350;
+    FaceInfo.faces[0].rect[1] = 58;
+    FaceInfo.faces[0].rect[2] = 225;
+    FaceInfo.faces[0].rect[3] = 825;
     FaceInfo.posInfo[0].rop_dir = 0;
     FaceInfo.posInfo[0].rip_dir = 0;
 
-    FaceInfo.faces[1].rect[0] = -112; 
-    FaceInfo.faces[1].rect[1] = -708; 
-    FaceInfo.faces[1].rect[2] = 262;  
-    FaceInfo.faces[1].rect[3] = -208;           
+    FaceInfo.faces[1].rect[0] = -112;
+    FaceInfo.faces[1].rect[1] = -708;
+    FaceInfo.faces[1].rect[2] = 262;
+    FaceInfo.faces[1].rect[3] = -208;
     FaceInfo.posInfo[1].rop_dir = 0;
     FaceInfo.posInfo[1].rip_dir = 0;
 
-    FaceInfo.faces[2].rect[0] = 393;  
-    FaceInfo.faces[2].rect[1] = -716; 
-    FaceInfo.faces[2].rect[2] = 875;  
-    FaceInfo.faces[2].rect[3] = -75;            
+    FaceInfo.faces[2].rect[0] = 393;
+    FaceInfo.faces[2].rect[1] = -716;
+    FaceInfo.faces[2].rect[2] = 875;
+    FaceInfo.faces[2].rect[3] = -75;
     FaceInfo.posInfo[2].rop_dir = 0;
     FaceInfo.posInfo[2].rip_dir = 0;
 
-    FaceInfo.faces[3].rect[0] = -825; 
-    FaceInfo.faces[3].rect[1] = 216;  
-    FaceInfo.faces[3].rect[2] = -587; 
-    FaceInfo.faces[3].rect[3] = 533;            
+    FaceInfo.faces[3].rect[0] = -825;
+    FaceInfo.faces[3].rect[1] = 216;
+    FaceInfo.faces[3].rect[2] = -587;
+    FaceInfo.faces[3].rect[3] = 533;
     FaceInfo.posInfo[3].rop_dir = 0;
     FaceInfo.posInfo[3].rip_dir = 0;
 
-    FaceInfo.faces[4].rect[0] = 400;  
-    FaceInfo.faces[4].rect[1] = 150;  
-    FaceInfo.faces[4].rect[2] = 781;  
-    FaceInfo.faces[4].rect[3] = 658;            
+    FaceInfo.faces[4].rect[0] = 400;
+    FaceInfo.faces[4].rect[1] = 150;
+    FaceInfo.faces[4].rect[2] = 781;
+    FaceInfo.faces[4].rect[3] = 658;
     FaceInfo.posInfo[4].rop_dir = 0;
     FaceInfo.posInfo[4].rip_dir = 3;
 
-    FaceInfo.faces[5].rect[0] = -856; 
-    FaceInfo.faces[5].rect[1] = -708; 
-    FaceInfo.faces[5].rect[2] = -518; 
-    FaceInfo.faces[5].rect[3] = -175;           
+    FaceInfo.faces[5].rect[0] = -856;
+    FaceInfo.faces[5].rect[1] = -708;
+    FaceInfo.faces[5].rect[2] = -518;
+    FaceInfo.faces[5].rect[3] = -175;
     FaceInfo.posInfo[5].rop_dir = 0;
     FaceInfo.posInfo[5].rip_dir = 11;
-    
+
     FaceInfo.number_of_faces = 6;
     #endif
     //
     //  (1.1) new Implementator.
     if(FaceInfo.number_of_faces==0)
-    { 
+    {
         return createNormalShot(pszShotName,u4ShotMode,i4OpenId);
     }
     else
@@ -284,104 +346,15 @@ onCreate(MtkCameraFaceMetadata* FaceInfo)
     FBmetadata.faces=(MtkCameraFace *)FBFaceInfo;
     FBmetadata.posInfo=(MtkFaceInfo *)MTKPoseInfo;
     FBmetadata.number_of_faces = FaceInfo->number_of_faces;
-    
-    if((mShotParam.mi4PostviewWidth*3) == (mShotParam.mi4PostviewHeight*4))
-    {
-        g_BufWidth = 320;
-        g_BufHeight = 240;
-    }
-    else if((mShotParam.mi4PostviewWidth*9) == (mShotParam.mi4PostviewHeight*16))
-    {
-        g_BufWidth = 320;
-        g_BufHeight = 180;
-    }
-    else if((mShotParam.mi4PostviewWidth*3) == (mShotParam.mi4PostviewHeight*5))
-    {
-        g_BufWidth = 320;
-        g_BufHeight = 192;
-    }
-    else
-    {
-        g_BufWidth = 320;
-        g_BufHeight = 180;
-    }
-
 
     for(int i=0;i<FaceInfo->number_of_faces;i++)
     {
-        FBmetadata.faces[i].rect[0] = ((FaceInfo->faces[i].rect[0] + 1000) * g_BufWidth) / 2000;
-        FBmetadata.faces[i].rect[1] = ((FaceInfo->faces[i].rect[1] + 1000) * g_BufHeight) / 2000;
-        FBmetadata.faces[i].rect[2] = ((FaceInfo->faces[i].rect[2] + 1000) * g_BufWidth) / 2000;
-        FBmetadata.faces[i].rect[3] = ((FaceInfo->faces[i].rect[3] + 1000) * g_BufHeight) / 2000;
+        FBmetadata.faces[i].rect[0] = FaceInfo->faces[i].rect[0];
+        FBmetadata.faces[i].rect[1] = FaceInfo->faces[i].rect[1];
+        FBmetadata.faces[i].rect[2] = FaceInfo->faces[i].rect[2];
+        FBmetadata.faces[i].rect[3] = FaceInfo->faces[i].rect[3];
         FBmetadata.posInfo[i].rop_dir = FaceInfo->posInfo[i].rop_dir;
         FBmetadata.posInfo[i].rip_dir = FaceInfo->posInfo[i].rip_dir;
-        
-        int face_size = FBmetadata.faces[i].rect[2] - FBmetadata.faces[i].rect[0];
-        if(face_size >= 30)
-        {
-        	  int zoom_size;
-            zoom_size = face_size/15;
-            
-            if( (FBmetadata.faces[i].rect[0] - zoom_size >= 0) && 
-            	  (FBmetadata.faces[i].rect[1] - zoom_size >= 0) &&
-            	  (FBmetadata.faces[i].rect[2] + zoom_size <= g_BufWidth -1) &&
-            	  (FBmetadata.faces[i].rect[3] + zoom_size <= g_BufHeight-1))
-            {
-                 zoom_size = face_size/12;
-            		 if( (FBmetadata.faces[i].rect[0] - zoom_size >= 0) && 
-            	       (FBmetadata.faces[i].rect[1] - zoom_size >= 0) &&
-            	       (FBmetadata.faces[i].rect[2] + zoom_size <= g_BufWidth -1) &&
-            	       (FBmetadata.faces[i].rect[3] + zoom_size <= g_BufHeight-1))
-            	   {
-            	   	    zoom_size = face_size/10;
-            		      if( (FBmetadata.faces[i].rect[0] - zoom_size >= 0) && 
-            	            (FBmetadata.faces[i].rect[1] - zoom_size >= 0) &&
-            	            (FBmetadata.faces[i].rect[2] + zoom_size <= g_BufWidth -1) &&
-            	            (FBmetadata.faces[i].rect[3] + zoom_size <= g_BufHeight-1))
-            	       {
-            	       	    zoom_size = face_size/8;
-            	    	      if( (FBmetadata.faces[i].rect[0] - zoom_size >= 0) && 
-            	                (FBmetadata.faces[i].rect[1] - zoom_size >= 0) &&
-            	                (FBmetadata.faces[i].rect[2] + zoom_size <= g_BufWidth -1) &&
-            	                (FBmetadata.faces[i].rect[3] + zoom_size <= g_BufHeight-1))
-            	            {
-            	    	           zoom_size = face_size/7;
-            	    	           if( (FBmetadata.faces[i].rect[0] - zoom_size >= 0) && 
-            	                     (FBmetadata.faces[i].rect[1] - zoom_size >= 0) &&
-            	                     (FBmetadata.faces[i].rect[2] + zoom_size <= g_BufWidth -1) &&
-            	                     (FBmetadata.faces[i].rect[3] + zoom_size <= g_BufHeight-1))
-            	                 {
-            	    	               ;
-            	                 }
-            	                 else
-            	                 {
-            	            		     zoom_size = face_size/8;
-            	                 }
-            	            }
-            	            else
-            	            {
-            	            		zoom_size = face_size/10;
-            	            }
-            	       }
-            	       else
-            	       {
-            	       	  zoom_size = face_size/12;
-            	       }
-            	   }
-            	   else
-            	   {
-            	   	   zoom_size = face_size/15;
-            	   }
-                 FBmetadata.faces[i].rect[0] -= zoom_size;
-                 FBmetadata.faces[i].rect[1] -= zoom_size;
-                 FBmetadata.faces[i].rect[2] += zoom_size;
-                 FBmetadata.faces[i].rect[3] += zoom_size;
-            }
-             
-
-
-        }
-        MY_LOGI("[facebeauty init] After FBFaceInfo num %d left %d top %d right %d button %d pose %d \n",i,FBmetadata.faces[i].rect[0],FBmetadata.faces[i].rect[1],FBmetadata.faces[i].rect[2],FBmetadata.faces[i].rect[3],MTKPoseInfo[i].rip_dir);
     }
 
     mpIMemDrv =  IMemDrv::createInstance();
@@ -400,6 +373,7 @@ onCreate(MtkCameraFaceMetadata* FaceInfo)
     }
     mpFbObj = this;
     mpFb->CANCEL = MFALSE;
+
     ret = MTRUE;
 lbExit:
     if  ( ! ret )
@@ -433,7 +407,7 @@ onDestroy()
     }
     mu4W_yuv = 0;
     mu4H_yuv = 0;
-    
+
     MY_LOGD("[uninit] out");
 }
 
@@ -445,6 +419,110 @@ Mhal_facebeauty::
 onCmd_capture()
 {
     MBOOL   ret = MFALSE;
+
+    MINT32  g_BufWidth;
+    MINT32  g_BufHeight;
+    if((mShotParam.mi4PostviewWidth*3) == (mShotParam.mi4PostviewHeight*4))
+    {
+        g_BufWidth = 320;
+        g_BufHeight = 240;
+    }
+    else if((mShotParam.mi4PostviewWidth*9) == (mShotParam.mi4PostviewHeight*16))
+    {
+        g_BufWidth = 320;
+        g_BufHeight = 180;
+    }
+    else if((mShotParam.mi4PostviewWidth*3) == (mShotParam.mi4PostviewHeight*5))
+    {
+        g_BufWidth = 320;
+        g_BufHeight = 192;
+    }
+    else
+    {
+        g_BufWidth = 320;
+        if(mShotParam.mi4PostviewWidth != 0)
+          g_BufHeight = 320 * mShotParam.mi4PostviewHeight/mShotParam.mi4PostviewWidth;
+        else
+          g_BufHeight = 180;
+    }
+
+    MY_LOGD("[onCmd_capture] Postview %dx%d -> Buf %dx%d\n",mShotParam.mi4PostviewWidth, mShotParam.mi4PostviewHeight, g_BufWidth, g_BufHeight);
+
+    for(int i=0;i<FBmetadata.number_of_faces;i++)
+    {
+        FBmetadata.faces[i].rect[0] = ((FBmetadata.faces[i].rect[0] + 1000) * g_BufWidth) / 2000;
+        FBmetadata.faces[i].rect[1] = ((FBmetadata.faces[i].rect[1] + 1000) * g_BufHeight) / 2000;
+        FBmetadata.faces[i].rect[2] = ((FBmetadata.faces[i].rect[2] + 1000) * g_BufWidth) / 2000;
+        FBmetadata.faces[i].rect[3] = ((FBmetadata.faces[i].rect[3] + 1000) * g_BufHeight) / 2000;
+
+        int face_size = FBmetadata.faces[i].rect[2] - FBmetadata.faces[i].rect[0];
+        if(face_size >= 30)
+        {
+        	  int zoom_size;
+            zoom_size = face_size/15;
+
+            if( (FBmetadata.faces[i].rect[0] - zoom_size >= 0) &&
+            	  (FBmetadata.faces[i].rect[1] - zoom_size >= 0) &&
+            	  (FBmetadata.faces[i].rect[2] + zoom_size <= g_BufWidth -1) &&
+            	  (FBmetadata.faces[i].rect[3] + zoom_size <= g_BufHeight-1))
+            {
+                 zoom_size = face_size/12;
+            		 if( (FBmetadata.faces[i].rect[0] - zoom_size >= 0) &&
+            	       (FBmetadata.faces[i].rect[1] - zoom_size >= 0) &&
+            	       (FBmetadata.faces[i].rect[2] + zoom_size <= g_BufWidth -1) &&
+            	       (FBmetadata.faces[i].rect[3] + zoom_size <= g_BufHeight-1))
+            	   {
+            	   	    zoom_size = face_size/10;
+            		      if( (FBmetadata.faces[i].rect[0] - zoom_size >= 0) &&
+            	            (FBmetadata.faces[i].rect[1] - zoom_size >= 0) &&
+            	            (FBmetadata.faces[i].rect[2] + zoom_size <= g_BufWidth -1) &&
+            	            (FBmetadata.faces[i].rect[3] + zoom_size <= g_BufHeight-1))
+            	       {
+            	       	    zoom_size = face_size/8;
+            	    	      if( (FBmetadata.faces[i].rect[0] - zoom_size >= 0) &&
+            	                (FBmetadata.faces[i].rect[1] - zoom_size >= 0) &&
+            	                (FBmetadata.faces[i].rect[2] + zoom_size <= g_BufWidth -1) &&
+            	                (FBmetadata.faces[i].rect[3] + zoom_size <= g_BufHeight-1))
+            	            {
+            	    	           zoom_size = face_size/7;
+            	    	           if( (FBmetadata.faces[i].rect[0] - zoom_size >= 0) &&
+            	                     (FBmetadata.faces[i].rect[1] - zoom_size >= 0) &&
+            	                     (FBmetadata.faces[i].rect[2] + zoom_size <= g_BufWidth -1) &&
+            	                     (FBmetadata.faces[i].rect[3] + zoom_size <= g_BufHeight-1))
+            	                 {
+            	    	               ;
+            	                 }
+            	                 else
+            	                 {
+            	            		     zoom_size = face_size/8;
+            	                 }
+            	            }
+            	            else
+            	            {
+            	            		zoom_size = face_size/10;
+            	            }
+            	       }
+            	       else
+            	       {
+            	       	  zoom_size = face_size/12;
+            	       }
+            	   }
+            	   else
+            	   {
+            	   	   zoom_size = face_size/15;
+            	   }
+                 FBmetadata.faces[i].rect[0] -= zoom_size;
+                 FBmetadata.faces[i].rect[1] -= zoom_size;
+                 FBmetadata.faces[i].rect[2] += zoom_size;
+                 FBmetadata.faces[i].rect[3] += zoom_size;
+            }
+
+
+
+        }
+        MY_LOGI("[onCmd_capture] After FBFaceInfo num %d left %d top %d right %d button %d pose %d \n",i,FBmetadata.faces[i].rect[0],FBmetadata.faces[i].rect[1],FBmetadata.faces[i].rect[2],FBmetadata.faces[i].rect[3],MTKPoseInfo[i].rip_dir);
+    }
+
     sem_init(&semMemoryDone, 0, 0);
     sem_init(&semFBthread, 0, 0);
     pthread_create(&threadFB, NULL, FBCapture, NULL);
@@ -482,7 +560,7 @@ onCmd_capture()
 
     //  Force to handle done even if there is any error before.
     //to do handleCaptureDone();
- 
+
     ret = MTRUE;
 lbExit:
     releaseBufs();
@@ -607,7 +685,7 @@ saveBufToFile(char const*const fname, MUINT8 *const buf, MUINT32 const size)
     ::close(fd);
     return true;
 }
-#ifdef Debug_Mode 
+#ifdef Debug_Mode
 /******************************************************************************
 *   read the file to the buffer
 *******************************************************************************/
@@ -656,18 +734,18 @@ MBOOL
 Mhal_facebeauty::
 fgCamShotNotifyCb(MVOID* user, CamShotNotifyInfo const msg)
 {
-    CAM_LOGD("[fgCamShotNotifyCb] + "); 
-    Mhal_facebeauty *pFBlShot = reinterpret_cast <Mhal_facebeauty *>(user); 
-    if (NULL != pFBlShot) 
+    CAM_LOGD("[fgCamShotNotifyCb] + ");
+    Mhal_facebeauty *pFBlShot = reinterpret_cast <Mhal_facebeauty *>(user);
+    if (NULL != pFBlShot)
     {
         CAM_LOGD("[fgCamShotNotifyCb] call back type %d",msg.msgType);
-        if (NSCamShot::ECamShot_NOTIFY_MSG_EOF == msg.msgType) 
+        if (NSCamShot::ECamShot_NOTIFY_MSG_EOF == msg.msgType)
         {
-            pFBlShot->mpShotCallback->onCB_Shutter(true, 0); 
-            CAM_LOGD("[fgCamShotNotifyCb] call back done");                                                     
+            pFBlShot->mpShotCallback->onCB_Shutter(true, 0);
+            CAM_LOGD("[fgCamShotNotifyCb] call back done");
         }
     }
-    CAM_LOGD("[fgCamShotNotifyCb] -"); 
+    CAM_LOGD("[fgCamShotNotifyCb] -");
     return MTRUE;
 }
 
@@ -679,11 +757,11 @@ Mhal_facebeauty::
 handleYuvDataCallback(MUINT8* const puBuf, MUINT32 const u4Size)
 {
     MY_LOGD("[handleYuvDataCallback] + (puBuf, size) = (%p, %d)", puBuf, u4Size);
-    
-    #ifdef Debug_Mode 
+
+    #ifdef Debug_Mode
     saveBufToFile("/sdcard/yuv.yuv", puBuf, u4Size);
     #endif
-    
+
     return 0;
 }
 
@@ -695,13 +773,13 @@ MBOOL
 Mhal_facebeauty::
 handlePostViewData(MUINT8* const puBuf, MUINT32 const u4Size)
 {
-    MY_LOGD("[handlePostViewData] + (puBuf, size) = (%p, %d)", puBuf, u4Size); 
-    mpShotCallback->onCB_PostviewDisplay(0, 
-                                         u4Size, 
+    MY_LOGD("[handlePostViewData] + (puBuf, size) = (%p, %d)", puBuf, u4Size);
+    mpShotCallback->onCB_PostviewDisplay(0,
+                                         u4Size,
                                          reinterpret_cast<uint8_t const*>(puBuf)
-                                        ); 
+                                        );
 
-    MY_LOGD("[handlePostViewData] -"); 
+    MY_LOGD("[handlePostViewData] -");
     return  MTRUE;
     }
 
@@ -712,38 +790,43 @@ MBOOL
 Mhal_facebeauty::
 handleJpegData(MUINT8* const puJpegBuf, MUINT32 const u4JpegSize, MUINT8* const puThumbBuf, MUINT32 const u4ThumbSize, MUINT32 const Mode)
 {
-    MY_LOGD("[handleJpegData] + (puJpgBuf, jpgSize, puThumbBuf, thumbSize, mode ) = (%p, %d, %p, %d, %d)", puJpegBuf, u4JpegSize, puThumbBuf, u4ThumbSize, Mode); 
+    MY_LOGD("[handleJpegData] + (puJpgBuf, jpgSize, puThumbBuf, thumbSize, mode ) = (%p, %d, %p, %d, %d)", puJpegBuf, u4JpegSize, puThumbBuf, u4ThumbSize, Mode);
 
-    MUINT8 *puExifHeaderBuf = new MUINT8[128 * 1024]; 
-    MUINT32 u4ExifHeaderSize = 0; 
+    MUINT8 *puExifHeaderBuf = new MUINT8[128 * 1024];
+    MUINT32 u4ExifHeaderSize = 0;
     mpIMemDrv->cacheFlushAll();
-    makeExifHeader(eAppMode_PhotoMode, puThumbBuf, u4ThumbSize, puExifHeaderBuf, u4ExifHeaderSize); 
-    MY_LOGD("[handleJpegData] (thumbbuf, size, exifHeaderBuf, size) = (%p, %d, %p, %d)", 
-                      puThumbBuf, u4ThumbSize, puExifHeaderBuf, u4ExifHeaderSize); 
-    // Jpeg callback 
+    makeExifHeader(eAppMode_PhotoMode, puThumbBuf, u4ThumbSize, puExifHeaderBuf, u4ExifHeaderSize);
+    MY_LOGD("[handleJpegData] (thumbbuf, size, exifHeaderBuf, size) = (%p, %d, %p, %d)",
+                      puThumbBuf, u4ThumbSize, puExifHeaderBuf, u4ExifHeaderSize);
+    // Jpeg callback
     if(Mode)
-    {        
-        //using mpAmap to reduce memory buffer
-        memcpy((void*)mpAmap.virtAddr, puExifHeaderBuf, u4ExifHeaderSize);
-        memcpy((void*)(mpAmap.virtAddr+u4ExifHeaderSize), puJpegBuf, u4JpegSize);
-        saveBufToFile(mShotParam.ms8ShotFileName, (MUINT8*)mpAmap.virtAddr, (u4JpegSize+u4ExifHeaderSize));
+    {
+        mpShotCallback->onCB_CompressedImage(0,
+                                         u4JpegSize,
+                                         reinterpret_cast<uint8_t const*>(puJpegBuf),
+                                         u4ExifHeaderSize,          //header size
+                                         puExifHeaderBuf,           //header buf
+                                         0,                         //callback index
+                                         false,                     //final image
+                                         MTK_CAMERA_MSG_EXT_DATA_FACEBEAUTY
+                                         );
     }
     else
     {
         mpShotCallback->onCB_CompressedImage(0,
-                                         u4JpegSize, 
+                                         u4JpegSize,
                                          reinterpret_cast<uint8_t const*>(puJpegBuf),
-                                         u4ExifHeaderSize,                       //header size 
+                                         u4ExifHeaderSize,                       //header size
                                          puExifHeaderBuf,                    //header buf
-                                         0,                       //callback index 
-                                         true                     //final image 
-                                         ); 
+                                         0,                       //callback index
+                                         true                     //final image
+                                         );
     }
-    MY_LOGD("[handleJpegData] -"); 
+    MY_LOGD("[handleJpegData] -");
 
-    delete [] puExifHeaderBuf; 
+    delete [] puExifHeaderBuf;
 
-    return MTRUE; 
+    return MTRUE;
 
 }
 
@@ -755,13 +838,13 @@ MBOOL
 Mhal_facebeauty::
 fgCamShotDataCb(MVOID* user, CamShotDataInfo const msg)
 {
-    Mhal_facebeauty *pFBlShot = reinterpret_cast<Mhal_facebeauty *>(user); 
+    Mhal_facebeauty *pFBlShot = reinterpret_cast<Mhal_facebeauty *>(user);
     CAM_LOGD("[fgCamShotDataCb] type %d +" ,msg.msgType);
-    if (NULL != pFBlShot) 
+    if (NULL != pFBlShot)
     {
-        if (NSCamShot::ECamShot_DATA_MSG_POSTVIEW == msg.msgType) 
+        if (NSCamShot::ECamShot_DATA_MSG_POSTVIEW == msg.msgType)
         {
-            pFBlShot->handlePostViewData( msg.puData, msg.u4Size);  
+            pFBlShot->handlePostViewData( msg.puData, msg.u4Size);
         }
         else if (NSCamShot::ECamShot_DATA_MSG_JPEG == msg.msgType)
         {
@@ -770,10 +853,10 @@ fgCamShotDataCb(MVOID* user, CamShotDataInfo const msg)
         else if (NSCamShot::ECamShot_DATA_MSG_YUV == msg.msgType)
         {
             pFBlShot->handleYuvDataCallback(msg.puData, msg.u4Size);
-        }       
+        }
     }
     CAM_LOGD("[fgCamShotDataCb] -" );
-    return MTRUE; 
+    return MTRUE;
 }
 
 /*******************************************************************************
@@ -790,13 +873,13 @@ createFullFrame(IMEM_BUF_INFO Srcbufinfo)
     NSCamShot::ISingleShot *pSingleShot = NSCamShot::ISingleShot::createInstance(eShotMode_FaceBeautyShot, "FaceBeautyshot");
     //
     pSingleShot->init();
-    EImageFormat ePostViewFmt = static_cast<EImageFormat>(android::MtkCamUtils::FmtUtils::queryImageioFormat(mShotParam.ms8PostviewDisplayFormat)); 
+    EImageFormat ePostViewFmt = static_cast<EImageFormat>(android::MtkCamUtils::FmtUtils::queryImageioFormat(mShotParam.ms8PostviewDisplayFormat));
 
     ImgBufInfo rSrcImgInfo;
 
     rSrcImgInfo.u4ImgWidth = mu4W_yuv;
     rSrcImgInfo.u4ImgHeight = mu4H_yuv;
-    rSrcImgInfo.eImgFmt = eImgFmt_YV16;    
+    rSrcImgInfo.eImgFmt = eImgFmt_YV16;
     rSrcImgInfo.u4Stride[0] = rSrcImgInfo.u4ImgWidth;
     rSrcImgInfo.u4Stride[1] = rSrcImgInfo.u4ImgWidth >> 1;
     rSrcImgInfo.u4Stride[2] = rSrcImgInfo.u4ImgWidth >> 1;
@@ -808,7 +891,7 @@ createFullFrame(IMEM_BUF_INFO Srcbufinfo)
 
     ImgBufInfo rPostImgInfo;
     rPostImgInfo.u4ImgWidth = mShotParam.mi4PostviewWidth;
-    rPostImgInfo.u4ImgHeight = mShotParam.mi4PostviewHeight;                   
+    rPostImgInfo.u4ImgHeight = mShotParam.mi4PostviewHeight;
     rPostImgInfo.eImgFmt = ePostViewFmt;
     rPostImgInfo.u4Stride[0] = rPostImgInfo.u4ImgWidth;
     rPostImgInfo.u4Stride[1] = rPostImgInfo.u4ImgWidth >> 1;
@@ -820,9 +903,9 @@ createFullFrame(IMEM_BUF_INFO Srcbufinfo)
     rPostImgInfo.i4MemID = mpBlurImg.memID;
 
     pSingleShot->registerImgBufInfo(ECamShot_BUF_TYPE_POSTVIEW, rPostImgInfo);
-    
+
     //
-        
+
     pSingleShot->enableDataMsg(ECamShot_DATA_MSG_YUV
                                  //| ECamShot_DATA_MSG_JPEG
                                  );
@@ -848,12 +931,12 @@ createFullFrame(IMEM_BUF_INFO Srcbufinfo)
 
 
     // sensor param
-        NSCamShot::SensorParam rSensorParam(static_cast<MUINT32>(MtkCamUtils::DevMetaInfo::queryHalSensorDev(getOpenId())),                             //Device ID 
+        NSCamShot::SensorParam rSensorParam(static_cast<MUINT32>(MtkCamUtils::DevMetaInfo::queryHalSensorDev(getOpenId())),                             //Device ID
 
-#warning [FIXME] workaround for Alta phone capture mode can not work 
-                             ACDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG,         //Scenaio 
-                             //ACDK_SCENARIO_ID_CAMERA_PREVIEW,         //Scenaio 
-                             10,                                       //bit depth 
+#warning [FIXME] workaround for Alta phone capture mode can not work
+                             ACDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG,         //Scenaio
+                             //ACDK_SCENARIO_ID_CAMERA_PREVIEW,         //Scenaio
+                             10,                                       //bit depth
                              MFALSE,                                   //bypass delay
                              MFALSE                                   //bypass scenario
                             );
@@ -873,18 +956,18 @@ createFullFrame(IMEM_BUF_INFO Srcbufinfo)
 
     //
     pSingleShot->destroyInstance();
-      
+
     if(mShotParam.ms8ShotFileName.string()!=NULL) {
         ret = createFBJpegImg(Srcbufinfo,mu4W_yuv,mu4H_yuv,1);
         if  ( ! ret )
         {
             goto lbExit;
         }
-    }   
-    sem_wait(&semMemoryDone);    
-    #ifdef Debug_Mode     
-    loadFileToBuf("/data/FBSOURCE.yuv",(uint8_t*)Srcbufinfo.virtAddr,Srcbufinfo.size);   
-    saveBufToFile("/sdcard/img.yuv", (uint8_t*)Srcbufinfo.virtAddr, Srcbufinfo.size); 
+    }
+    sem_wait(&semMemoryDone);
+    #ifdef Debug_Mode
+    loadFileToBuf("/data/FBSOURCE.yuv",(uint8_t*)Srcbufinfo.virtAddr,Srcbufinfo.size);
+    saveBufToFile("/sdcard/img.yuv", (uint8_t*)Srcbufinfo.virtAddr, Srcbufinfo.size);
     #endif
     CPTLog(Event_FBShot_createFullFrame, CPTFlagEnd);
     MY_LOGD("[createFullFrame] - \n");
@@ -918,7 +1001,7 @@ createJpegImg(NSCamHW::ImgBufInfo const & rSrcImgBufInfo
     MY_LOGE("HdrShot::createJpegImg can't get ISImager instance.");
     return MFALSE;
     }
-    
+
     // init setting
     NSCamHW::BufInfo rBufInfo(rJpgImgBufInfo.u4BufSize, rJpgImgBufInfo.u4BufVA, rJpgImgBufInfo.u4BufPA, rJpgImgBufInfo.i4MemID);
     //
@@ -939,10 +1022,10 @@ createJpegImg(NSCamHW::ImgBufInfo const & rSrcImgBufInfo
     pISImager->execute();
     //
     u4JpegSize = pISImager->getJpegSize();
-    
+
     pISImager->destroyInstance();
     CPTLog(Event_FBShot_JpegEncodeImg, CPTFlagEnd);
-    
+
     MY_LOGD("[init] - X. ret: %d.", ret);
     return ret;
 }
@@ -954,7 +1037,7 @@ MBOOL
 Mhal_facebeauty::
 createJpegImgWithThumbnail(NSCamHW::ImgBufInfo const &rYuvImgBufInfo, NSCamHW::ImgBufInfo const &rPostViewBufInfo, MUINT32 const Mode)
 {
-    MBOOL ret = MTRUE;    
+    MBOOL ret = MTRUE;
     MUINT32 stride[3];
     MY_LOGD("[createJpegImgWithThumbnail] in");
     //rJpegImgBufInfo
@@ -964,7 +1047,7 @@ createJpegImgWithThumbnail(NSCamHW::ImgBufInfo const &rYuvImgBufInfo, NSCamHW::I
     NSCamHW::ImgInfo    rJpegImgInfo(eImgFmt_JPEG, mu4W_yuv, mu4H_yuv);
     NSCamHW::BufInfo    rJpegBufInfo(jpegBuf.size, jpegBuf.virtAddr, jpegBuf.phyAddr, jpegBuf.memID);
     NSCamHW::ImgBufInfo   rJpegImgBufInfo(rJpegImgInfo, rJpegBufInfo, stride);
-    
+
     //rThumbImgBufInfo
     IMEM_BUF_INFO thumbBuf;
     thumbBuf.size = mJpegParam.mi4JpegThumbWidth * mJpegParam.mi4JpegThumbHeight;
@@ -972,14 +1055,14 @@ createJpegImgWithThumbnail(NSCamHW::ImgBufInfo const &rYuvImgBufInfo, NSCamHW::I
     NSCamHW::ImgInfo    rThumbImgInfo(eImgFmt_JPEG, mJpegParam.mi4JpegThumbWidth, mJpegParam.mi4JpegThumbHeight);
     NSCamHW::BufInfo    rThumbBufInfo(thumbBuf.size, thumbBuf.virtAddr, thumbBuf.phyAddr, thumbBuf.memID);
     NSCamHW::ImgBufInfo   rThumbImgBufInfo(rThumbImgInfo, rThumbBufInfo, stride);
-    
-    
+
+
     MUINT32 u4JpegSize = 0;
     MUINT32 u4ThumbSize = 0;
-    
+
     NSCamShot::JpegParam yuvJpegParam(mJpegParam.mu4JpegQuality, MFALSE);
     ret = ret && createJpegImg(rYuvImgBufInfo, yuvJpegParam, mShotParam.mi4Rotation, 0 , rJpegImgBufInfo, u4JpegSize);
-    
+
     // (3.1) create thumbnail
     // If postview is enable, use postview buffer,
     // else use yuv buffer to do thumbnail
@@ -992,10 +1075,10 @@ createJpegImgWithThumbnail(NSCamHW::ImgBufInfo const &rYuvImgBufInfo, NSCamHW::I
     #ifdef Debug_Mode // Save Img for debug.
     {
         char szFileName[100];
-        
+
         saveBufToFile("/sdcard/Result.jpg", (uint8_t*)jpegBuf.virtAddr, u4JpegSize);
         MY_LOGD("[createJpegImgWithThumbnail] Save %s done.", szFileName);
-        
+
         saveBufToFile("/sdcard/ThumbImg.jpg", (uint8_t*)thumbBuf.virtAddr, u4ThumbSize);
         MY_LOGD("[createJpegImgWithThumbnail] Save %s done.", szFileName);
     }
@@ -1004,7 +1087,7 @@ createJpegImgWithThumbnail(NSCamHW::ImgBufInfo const &rYuvImgBufInfo, NSCamHW::I
 
     // Jpeg callback, it contains thumbnail in ext1, ext2.
     handleJpegData((MUINT8*)rJpegImgBufInfo.u4BufVA, u4JpegSize, (MUINT8*)rThumbImgBufInfo.u4BufVA, u4ThumbSize, Mode);
-    
+
 
     mpIMemDrv->freeVirtBuf(&jpegBuf);
     mpIMemDrv->freeVirtBuf(&thumbBuf);
@@ -1031,9 +1114,9 @@ createFBJpegImg(IMEM_BUF_INFO Srcbufinfo, int u4SrcWidth, int u4SrcHeight, MUINT
     NSCamHW::ImgInfo    rYuvImgInfo(eImgFmt_YV16, u4SrcWidth , u4SrcHeight);
     NSCamHW::BufInfo    rYuvBufInfo(u4ResultSize, (MUINT32)Srcbufinfo.virtAddr, 0, Srcbufinfo.memID);
     NSCamHW::ImgBufInfo   rYuvImgBufInfo(rYuvImgInfo, rYuvBufInfo, u4Stride);
-    
+
     mPostviewWidth = mShotParam.mi4PostviewWidth;
-    mPostviewHeight = mShotParam.mi4PostviewHeight; 
+    mPostviewHeight = mShotParam.mi4PostviewHeight;
     IMEM_BUF_INFO tmpPostView;
     tmpPostView.size = android::MtkCamUtils::FmtUtils::queryImgBufferSize(mShotParam.ms8PostviewDisplayFormat, mPostviewWidth, mPostviewHeight);
     if(!(allocMem(tmpPostView)))
@@ -1043,27 +1126,27 @@ createFBJpegImg(IMEM_BUF_INFO Srcbufinfo, int u4SrcWidth, int u4SrcHeight, MUINT
         ret = MFALSE;
         return ret;
     }
-           
-    EImageFormat mPostviewFormat = static_cast<EImageFormat>(android::MtkCamUtils::FmtUtils::queryImageioFormat(mShotParam.ms8PostviewDisplayFormat));    
+
+    EImageFormat mPostviewFormat = static_cast<EImageFormat>(android::MtkCamUtils::FmtUtils::queryImageioFormat(mShotParam.ms8PostviewDisplayFormat));
     mpPostviewImgBuf.size = android::MtkCamUtils::FmtUtils::queryImgBufferSize(mShotParam.ms8PostviewDisplayFormat, mPostviewWidth, mPostviewHeight);
     mpPostviewImgBuf.virtAddr = tmpPostView.virtAddr; //using original buffer for reduce memory
-    mpPostviewImgBuf.memID = -1;    
+    mpPostviewImgBuf.memID = -1;
     ImgProcess(Srcbufinfo, u4SrcWidth, u4SrcHeight, eImgFmt_YV16, mpPostviewImgBuf, mPostviewWidth, mPostviewHeight, mPostviewFormat);
-    
+
     MUINT32     u4PosStride[3];
     u4PosStride[0] = mPostviewWidth;
     u4PosStride[1] = mPostviewWidth >> 1;
     u4PosStride[2] = mPostviewWidth >> 1;
-    
+
     NSCamHW::ImgInfo    rPostViewImgInfo(mPostviewFormat, mPostviewWidth, mPostviewHeight);
     NSCamHW::BufInfo    rPostViewBufInfo(mpPostviewImgBuf.size, (MUINT32)mpPostviewImgBuf.virtAddr, 0, mpPostviewImgBuf.memID);
     NSCamHW::ImgBufInfo   rPostViewImgBufInfo(rPostViewImgInfo, rPostViewBufInfo, u4PosStride);
-    
+
     if(!Mode)
         handlePostViewData((MUINT8*)mpPostviewImgBuf.virtAddr, mpPostviewImgBuf.size);
-        
+
     ret = createJpegImgWithThumbnail(rYuvImgBufInfo, rPostViewImgBufInfo, Mode);
-    
+
     if(!(deallocMem(tmpPostView)))
     {
         tmpPostView.size = 0;
@@ -1071,7 +1154,7 @@ createFBJpegImg(IMEM_BUF_INFO Srcbufinfo, int u4SrcWidth, int u4SrcHeight, MUINT
         ret = MFALSE;
         return ret;
     }
-    
+
     CPTLog(Event_FBShot_createFBJpegImg, CPTFlagEnd);
     MY_LOGD("[createFBJpegImg] out");
     return ret;
@@ -1082,7 +1165,7 @@ Mhal_facebeauty::
 doCapture()
 {
     MBOOL ret = MFALSE;
-    CPTLog(Event_FBShot_Utility, CPTFlagStart);    
+    CPTLog(Event_FBShot_Utility, CPTFlagStart);
     //MINT8 TargetColor = NSCamCustom::get_FB_ColorTarget();
     //MINT8 BlurLevel = NSCamCustom::get_FB_BlurLevel();
     MINT8 TargetColor =0;
@@ -1090,7 +1173,7 @@ doCapture()
 
     ret =
         //  ()  Request Buffers.
-        requestBufs()        
+        requestBufs()
         &&  createFullFrame(mpSource)
         &&  InitialAlgorithm(mu4W_yuv, mu4H_yuv, BlurLevel, TargetColor)
         &&  STEP1(mpSource, mu4W_yuv, mu4H_yuv, mpBlurImg, mpAmap, (void*) &msFaceBeautyResultInfo)
@@ -1137,25 +1220,25 @@ MVOID* FBUtility(void *arg)
                     mpFbObj->mpWorkingBuferr.size = 0;
                     CAM_LOGE("[requestBufs] mpWorkingBuferr alloc fail");
                 }
-                
+
                 mpFbObj->mpAmap.size = mpFbObj->mu4SourceSize;
                 if(!(mpFbObj->allocMem(mpFbObj->mpAmap)))
                 {
                     mpFbObj->mpAmap.size = 0;
                     CAM_LOGE("[requestBufs] mpAmap alloc fail");
                 }
-                
+
                 mpFbObj->mpBlurImg.size = mpFbObj->mu4SourceSize;
                 if(!(mpFbObj->allocMem(mpFbObj->mpBlurImg)))
                 {
                     mpFbObj->mpBlurImg.size = 0;
                     CAM_LOGE("[requestBufs] mpBlurImg alloc fail");
                 }
-                     
+
                 sem_post(&semMemoryDone);
                 break;
             case 2: // jpg encode
-                CAM_LOGD("[FBUtility] jpg encode ");               
+                CAM_LOGD("[FBUtility] jpg encode ");
                 ret = mpFbObj->createFBJpegImg(mpFbObj->mpSource,mpFbObj->mu4W_yuv,mpFbObj->mu4H_yuv,1);
                 if  ( ! ret )
                 {
@@ -1180,11 +1263,11 @@ allocMem(IMEM_BUF_INFO &memBuf)
 {
     memBuf.memID=-1;
     memBuf.virtAddr = (MUINT32)malloc(memBuf.size);
-    if(!memBuf.virtAddr) {   
+    if(!memBuf.virtAddr) {
         MY_LOGE("g_pIMemDrv->allocVirtBuf() error \n");
         return MFALSE;
     }
-	
+
     //if (mpIMemDrv->allocVirtBuf(&memBuf)) {
     //    MY_LOGE("g_pIMemDrv->allocVirtBuf() error \n");
     //    return MFALSE;
@@ -1226,7 +1309,7 @@ requestBufs()
     MBOOL   fgRet = MFALSE;
     mu4W_yuv = mShotParam.mi4PictureWidth;
     mu4H_yuv = mShotParam.mi4PictureHeight;
-    #ifdef Debug_Mode 
+    #ifdef Debug_Mode
     mu4W_yuv = 640;
     mu4H_yuv = 480;
     #endif
@@ -1248,13 +1331,17 @@ requestBufs()
     else
     {
         mDSWidth = 640;
-        mDSHeight = 480;
+
+        if(mu4W_yuv != 0)
+          mDSHeight = 640 * mu4H_yuv/mu4W_yuv;
+        else
+          mDSHeight = 480;
     }
-    
+
     CPTLog(Event_FBShot_requestBufs, CPTFlagStart);
     MY_LOGD("[requestBufs] mu4W_yuv %d mu4H_yuv %d",mu4W_yuv,mu4H_yuv);
     //  (1)
-  
+
     mu4SourceSize=mu4W_yuv*mu4H_yuv*2;
     if(mu4SourceSize< (mShotParam.mi4PostviewWidth * mShotParam.mi4PostviewHeight * 2) )
         mu4SourceSize = (mShotParam.mi4PostviewWidth * mShotParam.mi4PostviewHeight * 2);
@@ -1264,11 +1351,11 @@ requestBufs()
         mpSource.size = 0;
         MY_LOGE("[requestBufs] mpSource alloc fail");
         goto lbExit;
-    } 
-                   
+    }
+
     UtilityStatus = 3;
     sem_post(&semUtilitythread);
-    
+
     CPTLog(Event_FBShot_requestBufs, CPTFlagEnd);
     fgRet = MTRUE;
 lbExit:
@@ -1312,11 +1399,11 @@ SaveJpg()
     {
         CAM_LOGD("Save JPG");
         sem_init(&semJPGDone, 0, 0);
-        UtilityStatus = 2;    
+        UtilityStatus = 2;
         sem_post(&semUtilitythread);
     }
     return  MTRUE;
-} 
+}
 
 /*******************************************************************************
 *
@@ -1333,4 +1420,4 @@ WaitSaveDone()
     }
     return  MTRUE;
 }
-  
+

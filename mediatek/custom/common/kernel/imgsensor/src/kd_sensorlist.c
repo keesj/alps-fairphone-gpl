@@ -1336,10 +1336,14 @@ inline static int  adopt_CAMERA_HW_FeatureControl(void *pBuf)
         case SENSOR_FEATURE_GET_SHUTTER_GAIN_AWB_GAIN:
         case SENSOR_FEATURE_SET_AE_WINDOW:
         case SENSOR_FEATURE_GET_EXIF_INFO:
-		case SENSOR_FEATURE_GET_DELAY_INFO:
+        case SENSOR_FEATURE_GET_DELAY_INFO:
         case SENSOR_FEATURE_GET_AE_AWB_LOCK_INFO:
-		case SENSOR_FEATURE_SET_MAX_FRAME_RATE_BY_SCENARIO:
-		case SENSOR_FEATURE_GET_DEFAULT_FRAME_RATE_BY_SCENARIO:
+        case SENSOR_FEATURE_SET_MAX_FRAME_RATE_BY_SCENARIO:
+        case SENSOR_FEATURE_GET_DEFAULT_FRAME_RATE_BY_SCENARIO:
+        case SENSOR_FEATURE_AUTOTEST_CMD:	
+        case SENSOR_FEATURE_GET_AE_FLASHLIGHT_INFO:
+		case SENSOR_FEATURE_SET_TEST_PATTERN:
+		case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE:	
             //
             if(copy_from_user((void*)pFeaturePara , (void *) pFeatureCtrl->pFeaturePara, FeatureParaLen)) {
                 kfree(pFeaturePara);
@@ -1454,8 +1458,8 @@ inline static int  adopt_CAMERA_HW_FeatureControl(void *pBuf)
         case SENSOR_FEATURE_GET_EV_AWB_REF:
         case SENSOR_FEATURE_GET_SHUTTER_GAIN_AWB_GAIN:
         case SENSOR_FEATURE_GET_EXIF_INFO:
-		case SENSOR_FEATURE_GET_DELAY_INFO:
-		case SENSOR_FEATURE_GET_AE_AWB_LOCK_INFO:
+        case SENSOR_FEATURE_GET_DELAY_INFO:
+        case SENSOR_FEATURE_GET_AE_AWB_LOCK_INFO:
         case SENSOR_FEATURE_GET_RESOLUTION:
         case SENSOR_FEATURE_GET_PERIOD:
         case SENSOR_FEATURE_GET_PIXEL_CLOCK_FREQ:
@@ -1472,7 +1476,10 @@ inline static int  adopt_CAMERA_HW_FeatureControl(void *pBuf)
         case SENSOR_FEATURE_GET_AF_MAX_NUM_FOCUS_AREAS:
         case SENSOR_FEATURE_GET_AE_MAX_NUM_METERING_AREAS:
         case SENSOR_FEATURE_CHECK_SENSOR_ID:
-		case SENSOR_FEATURE_GET_DEFAULT_FRAME_RATE_BY_SCENARIO:	
+        case SENSOR_FEATURE_GET_DEFAULT_FRAME_RATE_BY_SCENARIO:
+        case SENSOR_FEATURE_GET_AE_FLASHLIGHT_INFO:	
+		case SENSOR_FEATURE_SET_TEST_PATTERN:
+		case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE:
             //
             if(copy_to_user((void __user *) pFeatureCtrl->pFeaturePara, (void*)pFeaturePara , FeatureParaLen)) {
                 kfree(pFeaturePara);

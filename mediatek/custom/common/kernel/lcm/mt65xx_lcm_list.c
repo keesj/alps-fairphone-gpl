@@ -70,9 +70,20 @@ extern LCM_DRIVER nt35596_fhd_dsi_vdo_truly_lcm_drv;
 extern LCM_DRIVER lgld070wx3_dsi_vdo_lcm_drv;
 extern LCM_DRIVER he080ia_lcm_drv;
 extern LCM_DRIVER auo_b079xat02_dsi_vdo_lcm_drv;
+extern LCM_DRIVER otm9608_qhd_dsi_cmd_drv; //ghong tyang add
+extern LCM_DRIVER otm8009_dsi_6517_lcm_drv;
+extern LCM_DRIVER rm68190_qhd_dsi_vdo_lcm_drv;	//ghong hhongyan add for w32-t
+extern LCM_DRIVER nt35516_qhd_dsi_cmd_lcm_drv;
+extern LCM_DRIVER nt35521_hd720_dsi_vdo_lcm_drv;
+extern LCM_DRIVER hx8394a_dsi_lcm_drv;
 
 LCM_DRIVER* lcm_driver_list[] = 
 { 
+
+#if defined(RM68190_QHD_DSI_VDO)
+	&rm68190_qhd_dsi_vdo_lcm_drv,
+#endif
+
 #if defined(HX8369)
 	&hx8369_lcm_drv,
 #endif
@@ -306,6 +317,10 @@ LCM_DRIVER* lcm_driver_list[] =
   &nt35516_qhd_dsi_cmd_ipsboe_lcm_drv,
 #endif
 
+#if defined(NT35516_QHD_DSI_CMD)
+  &nt35516_qhd_dsi_cmd_lcm_drv,
+#endif
+
 #if defined(NT35516_QHD_DSI_CMD_IPSBOE_WVGA)
   &nt35516_qhd_dsi_cmd_ipsboe_wvga_lcm_drv,
 #endif
@@ -346,6 +361,10 @@ LCM_DRIVER* lcm_driver_list[] =
     &lgld070wx3_dsi_vdo_lcm_drv,
 #endif
 
+#if defined(OTM9608_QHD_DSI_CMD)   //ghong tyang add
+	&otm9608_qhd_dsi_cmd_drv,
+#endif
+
 #if defined(HE080IA)
 	&he080ia_lcm_drv,
 #endif
@@ -353,6 +372,18 @@ LCM_DRIVER* lcm_driver_list[] =
 #if defined(AUO_B079XAT02_DSI_VDO)
     &auo_b079xat02_dsi_vdo_lcm_drv,
 #endif
+
+#if defined(OTM8009_6517_DSI)
+        &otm8009_dsi_6517_lcm_drv,
+#endif
+
+#if defined(NT35521_HD720_DSI_VDO)
+        &nt35521_hd720_dsi_vdo_lcm_drv,
+#endif
+#if defined(HX8394A_DSI_VDO)
+	&hx8394a_dsi_lcm_drv,
+#endif
+
 };
 
 #define LCM_COMPILE_ASSERT(condition) LCM_COMPILE_ASSERT_X(condition, __LINE__)

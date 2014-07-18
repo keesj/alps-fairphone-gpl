@@ -1642,6 +1642,7 @@ static int bma250_i2c_probe(struct i2c_client *client, const struct i2c_device_i
 #endif 
 
 	GSE_LOG("%s: OK\n", __func__);    
+	printk("bma250 probe ok!\n");
 	return 0;
 
 	exit_create_attr_failed:

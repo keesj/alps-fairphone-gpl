@@ -1,3 +1,29 @@
+/********************************************************************************************
+ *     LEGAL DISCLAIMER
+ *
+ *     (Header of MediaTek Software/Firmware Release or Documentation)
+ *
+ *     BY OPENING OR USING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ *     THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE") RECEIVED
+ *     FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON AN "AS-IS" BASIS
+ *     ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES, EXPRESS OR IMPLIED,
+ *     INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+ *     A PARTICULAR PURPOSE OR NONINFRINGEMENT. NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY
+ *     WHATSOEVER WITH RESPECT TO THE SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY,
+ *     INCORPORATED IN, OR SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK
+ *     ONLY TO SUCH THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
+ *     NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S SPECIFICATION
+ *     OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+ *
+ *     BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE LIABILITY WITH
+ *     RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE, AT MEDIATEK'S OPTION,
+ TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE, OR REFUND ANY SOFTWARE LICENSE
+ *     FEES OR SERVICE CHARGE PAID BY BUYER TO MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ *     THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE WITH THE LAWS
+ *     OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF LAWS PRINCIPLES.
+ ************************************************************************************************/
+
 #define LOG_TAG "lsc_mgr"
 #ifndef ENABLE_MY_LOG
 #define ENABLE_MY_LOG           (1)
@@ -141,14 +167,35 @@ fillTblInfoByLscScenarionCT(SHADING_TBL_SPEC &tbl_sepc,
                     m_SensorCrop[sensor_scenario].u4CropW * m_SensorCrop[ref_scenario].u4CropH ) {
                 MY_ERR("[%s] Not Support case, input/output scale down and different aspect ratio!!", __FUNCTION__);
             }
-        } else {    // crop down, different aspect ratio
-            tbl_sepc.img_width   = m_SensorCrop[ref_scenario].u4CropW;
-            tbl_sepc.img_height  = m_SensorCrop[ref_scenario].u4CropH;
-            tbl_sepc.offset_x    = (m_SensorCrop[ref_scenario].u4CropW - m_SensorCrop[sensor_scenario].u4CropW)/2;
-            tbl_sepc.offset_y    = (m_SensorCrop[ref_scenario].u4CropH - m_SensorCrop[sensor_scenario].u4CropH)/2;
-            tbl_sepc.crop_width  = m_SensorCrop[sensor_scenario].u4CropW;
-            tbl_sepc.crop_height = m_SensorCrop[sensor_scenario].u4CropH;
-            MY_LOG("[%s] Croped down", __FUNCTION__);
+        }
+        else 
+        {   
+            if (m_SensorCrop[sensor_scenario].u4SubSpW)
+            {
+                // crop down, same aspect ratio, and scale down
+                MY_LOG("[%s] Croped down + Scaled down", __FUNCTION__);
+                MUINT32 u4OutW = m_SensorCrop[sensor_scenario].u4CropW;
+                MUINT32 u4OutH = m_SensorCrop[sensor_scenario].u4CropH;
+                MUINT32 u4OrgW = m_SensorCrop[ref_scenario].u4CropW;
+                MUINT32 u4OrgH = m_SensorCrop[ref_scenario].u4CropH;
+                tbl_sepc.img_width   = u4OrgW;
+                tbl_sepc.img_height  = u4OrgH;
+                tbl_sepc.offset_x    = 0;
+                tbl_sepc.offset_y    = (u4OrgH - u4OrgW*u4OutH/u4OutW) / 2;
+                tbl_sepc.crop_width  = u4OrgW;
+                tbl_sepc.crop_height = u4OrgW*u4OutH/u4OutW;    // 3200/1920*1080=1800
+            }
+            else
+            {
+                // crop down, different aspect ratio
+                tbl_sepc.img_width   = m_SensorCrop[ref_scenario].u4CropW;
+                tbl_sepc.img_height  = m_SensorCrop[ref_scenario].u4CropH;
+                tbl_sepc.offset_x    = (m_SensorCrop[ref_scenario].u4CropW - m_SensorCrop[sensor_scenario].u4CropW)/2;
+                tbl_sepc.offset_y    = (m_SensorCrop[ref_scenario].u4CropH - m_SensorCrop[sensor_scenario].u4CropH)/2;
+                tbl_sepc.crop_width  = m_SensorCrop[sensor_scenario].u4CropW;
+                tbl_sepc.crop_height = m_SensorCrop[sensor_scenario].u4CropH;
+                MY_LOG("[%s] Croped down", __FUNCTION__);
+            }
         }
 
         tbl_sepc.bayer       = BAYER_B;
@@ -1147,6 +1194,8 @@ loadLut()
     MY_LOG("[LscMgr] ConfigUpdate Done!");
     importEEPromData();
     MY_LOG("[LscMgr] importEEPromData Done!");
+    ConfigUpdate();
+    MY_LOG("[LscMgr] ConfigUpdate Again!");
 #if ENABLE_TSF
     loadTSFLut();
     MY_LOG("[LscMgr] loadTSFLut Done!");
@@ -1429,6 +1478,10 @@ getScenarioResolution(ACDK_SCENARIO_ID_ENUM scenario)
             (int)&m_SensorCrop[scenario].u4GrabX,
             (int)&m_SensorCrop[scenario].u4GrabY,
             scenario);
+    m_pSensorHal->sendCommand(m_SensorDev, SENSOR_CMD_GET_SENSOR_SUBSAMPLING_INFO,
+            (int)&m_SensorCrop[scenario].u4SubSpW,
+            (int)&m_SensorCrop[scenario].u4SubSpH,
+            scenario);
 
     switch(scenario)
     {
@@ -1478,7 +1531,7 @@ getScenarioResolution(ACDK_SCENARIO_ID_ENUM scenario)
     m_SensorCrop[scenario].u4SrcH =
             m_SensorCrop[scenario].u4CropH+m_SensorCrop[scenario].u4GrabY;
 
-    MY_LOG("[%s] SensorOP %d GrabX GrabY SrcW SrcH CropW CropH DataFmt (%d, %d, %d, %d, %d, %d, %d)", __FUNCTION__,
+    MY_LOG("[%s] SensorOP %d GrabX GrabY SrcW SrcH CropW CropH SubW SubH DataFmt (%d, %d, %d, %d, %d, %d, %d, %d, %d)", __FUNCTION__,
             scenario,
             m_SensorCrop[scenario].u4GrabX,          // For input sensor width
             m_SensorCrop[scenario].u4GrabY,          // For input sensor height
@@ -1486,6 +1539,8 @@ getScenarioResolution(ACDK_SCENARIO_ID_ENUM scenario)
             m_SensorCrop[scenario].u4SrcH,          // For input sensor height
             m_SensorCrop[scenario].u4CropW,        //TG crop width
             m_SensorCrop[scenario].u4CropH,        //TG crop height
+            m_SensorCrop[scenario].u4SubSpW,
+            m_SensorCrop[scenario].u4SubSpH,
             m_SensorCrop[scenario].DataFmt);
 
     return MTRUE;
@@ -1765,8 +1820,7 @@ setMetaIspProfile(EIspProfile_T const eIspProfile, MUINT32 sensor_mode)
         return MFALSE;
     }
 
-
-    //if (eIspProfile == EIspProfile_NormalCapture) 
+    if (eIspProfile == EIspProfile_NormalCapture) 
     {
         switch (m_SensorMode) {
             case ESensorMode_Preview:
@@ -1843,7 +1897,6 @@ isEnable()
 {
     {
         ISP_NVRAM_LSC_T debug;
-        ISP_MGR_LSC_T::getInstance(m_eActive).reset();
         ISP_MGR_LSC_T::getInstance(m_eActive).get(debug);
         //        MY_LOG("[LscMgr] %s Shading param \n"
         //                "lsci, base, xsize, lsc, 0x%x, 0x%x, 0x%x, 0x%x, \n"

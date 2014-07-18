@@ -566,18 +566,18 @@ evaluate_Shading_CCT_index  (
         {
             eIdx_Shading_CCT_new = eIDX_Shading_CCT_CWF;
         }
-        else
+/*        else
         {
-        	//20130103 Jouny
-        	if(i4DFIDX < TH3)
-        	{
-        		eIdx_Shading_CCT_new = eIDX_Shading_CCT_CWF;
-        	}
-			else
-			{
-            	eIdx_Shading_CCT_new = eIDX_Shading_CCT_D65;
-			}
-        }
+                //20130103 Jouny
+                if(i4DFIDX < TH3)
+                {
+                                eIdx_Shading_CCT_new = eIDX_Shading_CCT_CWF;
+                }*/
+                                                else
+                                                {
+                eIdx_Shading_CCT_new = eIDX_Shading_CCT_D65;
+                                                }
+        //}
         break;
     case eIDX_Shading_CCT_CWF:
         if  ( i4CCT < THL1 )
@@ -601,19 +601,19 @@ evaluate_Shading_CCT_index  (
         {
             eIdx_Shading_CCT_new = eIDX_Shading_CCT_CWF;
         }
-        else
+        /*else
         {
-        	//20130103 Jouny
-        	if(i4DFIDX < TH3)
-        	{
-        		eIdx_Shading_CCT_new = eIDX_Shading_CCT_CWF;
-        	}
-			else
-			{
-            	eIdx_Shading_CCT_new = eIDX_Shading_CCT_D65;
-			}
+                //20130103 Jouny
+                if(i4DFIDX < TH3)
+                {
+                                eIdx_Shading_CCT_new = eIDX_Shading_CCT_CWF;
+                }*/
+                                                else
+                                                {
+                eIdx_Shading_CCT_new = eIDX_Shading_CCT_D65;
+                                                }
 
-        }
+        //}
         break;
     case eIDX_Shading_CCT_D65:
         if  ( i4CCT < TH1 )
@@ -637,20 +637,20 @@ evaluate_Shading_CCT_index  (
         {
             eIdx_Shading_CCT_new = eIDX_Shading_CCT_CWF;
         }
-        else
+        /*else
         {
-        	//20130103 Jouny
-        	if(i4DFIDX < TH3)
-        	{
-        		eIdx_Shading_CCT_new = eIDX_Shading_CCT_CWF;
-        	}
-			else
-			{
-            	eIdx_Shading_CCT_new = eIDX_Shading_CCT_D65;
-			}
+                //20130103 Jouny
+                if(i4DFIDX < TH3)
+                {
+                                eIdx_Shading_CCT_new = eIDX_Shading_CCT_CWF;
+                }*/
+                                                else
+                                                {
+                eIdx_Shading_CCT_new = eIDX_Shading_CCT_D65;
+                                                }
 
 
-        }
+        //}
         break;
     }
 //#if ENABLE_MY_LOG

@@ -1,3 +1,63 @@
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ */
+/* MediaTek Inc. (C) 2010. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
+
+/********************************************************************************************
+ *	   LEGAL DISCLAIMER
+ *
+ *	   (Header of MediaTek Software/Firmware Release or Documentation)
+ *
+ *	   BY OPENING OR USING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ *	   THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE") RECEIVED
+ *	   FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON AN "AS-IS" BASIS
+ *	   ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES, EXPRESS OR IMPLIED,
+ *	   INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+ *	   A PARTICULAR PURPOSE OR NONINFRINGEMENT. NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY
+ *	   WHATSOEVER WITH RESPECT TO THE SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY,
+ *	   INCORPORATED IN, OR SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK
+ *	   ONLY TO SUCH THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
+ *	   NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S SPECIFICATION
+ *	   OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+ *
+ *	   BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE LIABILITY WITH
+ *	   RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE, AT MEDIATEK'S OPTION,
+TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE, OR REFUND ANY SOFTWARE LICENSE
+ *	   FEES OR SERVICE CHARGE PAID BY BUYER TO MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ *	   THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE WITH THE LAWS
+ *	   OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF LAWS PRINCIPLES.
+ ************************************************************************************************/
 #include "MyHdr.h"
 
 #include <cstdio>
@@ -7,6 +67,8 @@
 #include <sys/resource.h>
 #include <limits.h>
 #include <cutils/properties.h>
+
+#include <camera/MtkCamera.h>
 
 #include <common/CamTypes.h>
 #include <common/camutils/CamFormat.h>
@@ -18,11 +80,21 @@
 #include <camshot/_callbacks.h>
 #include <camshot/ICamShot.h>
 #include <camshot/ISingleShot.h>
+#include <camshot/IBurstShot.h>
 
 #include <drv/imem_drv.h>
 #include <drv/sensor_hal.h>
 
 #include <aaa_hal_base.h>
+
+#include <CamUtils.h>
+#include <IImgBufQueue.h>
+
+using namespace android;
+using namespace MtkCamUtils;
+#include <ICamAdapter.h>
+#include <ImgBufProvidersManager.h>
+#include <BaseCamAdapter.h>
 
 
 #define MHAL_CAM_THUMB_ADDR_OFFSET  (64 * 1024)
@@ -37,12 +109,6 @@ struct HdrFileInfo {
 	MUINT32	size;
 	MUINT8	*buffer;
 };
-#if 0
-struct HdrMemBufInfo {
-	void			*handler;
-	IMEM_BUF_INFO	*imemBufInfo;
-};
-#endif
 
 MBOOL
 HdrShot::
@@ -66,29 +132,70 @@ updateInfo()
 	mDebugMode = atoi(value);
 	MY_DBG("[updateInfo] - mDebugMode=%d", mDebugMode);
 
-
-	//
-	if(mShotParam.mi4PictureWidth<=1600 && mShotParam.mi4PictureHeight<=1200) {
-		mHdrRoundTotal = 1;
-	} else {
-		mHdrRoundTotal = 2;
-	}
-	MY_DBG("[updateInfo] - mHdrRoundTotal=%d", mHdrRoundTotal);
-
 	//capture policy, priority
 	GetThreadProp(&mCapturePolicy, &mCapturePriority);
 	MY_DBG("[updateInfo] - mCapturePolicy=%d", mCapturePolicy);
 	MY_DBG("[updateInfo] - mCapturePriority=%d", mCapturePriority);
 
-	//capture
 	mu4W_yuv = mShotParam.mi4PictureWidth;
 	mu4H_yuv = mShotParam.mi4PictureHeight;
+
+#if CUST_HDR_CAPTURE_POLICY==1
+    {
+        //  (1)  get sensor resolution
+        SensorHal *pSensorHal = NULL;
+        MUINT32 u4SensorWidth = 0;
+        MUINT32 u4SensorHeight = 0;
+
+    	pSensorHal = SensorHal::createInstance();
+
+    	if (NULL == pSensorHal)
+    	{
+    		MY_ERR("pSensorHal is NULL");
+    		return 0;
+    	}
+    	pSensorHal->init();
+    	pSensorHal->sendCommand(SENSOR_DEV_MAIN
+                                    , SENSOR_CMD_GET_SENSOR_FULL_RANGE
+    							    , (int)&u4SensorWidth
+    							    , (int)&u4SensorHeight
+                                    , 0
+                                    );
+    	MY_DBG("[updateInfo] SensorHal:sensor width:%d, height:%d\n", u4SensorWidth, u4SensorHeight);
+    	pSensorHal->uninit();
+    	pSensorHal->destroyInstance();
+
+        //  (2)  Is capture size over sensor size ?
+    	if(mShotParam.mi4PictureWidth * mShotParam.mi4PictureHeight > u4SensorWidth  * u4SensorHeight)
+    	{
+    	    float scaleRatio = (float)mShotParam.mi4PictureHeight / mShotParam.mi4PictureWidth;
+    		mu4W_yuv = u4SensorWidth;
+    		mu4H_yuv = u4SensorWidth * scaleRatio;
+            mu4W_yuv &= ~0x01;
+            mu4H_yuv &= ~0x01;
+        	MY_DBG("[updateInfo] HDR:width=%d,height=%d, mu4W_yuv:%d, mu4H_yuv:%d\n"
+                    , mShotParam.mi4PictureWidth
+                    , mShotParam.mi4PictureHeight
+                    , mu4W_yuv
+                    , mu4H_yuv
+                    );
+    	}
+    }
+#endif
 	mu4SourceSize = mu4W_yuv * mu4H_yuv * 3/2;	//eImgFmt_YV12
 
 	//postview
 	mPostviewWidth = mShotParam.mi4PostviewWidth;
 	mPostviewHeight = mShotParam.mi4PostviewHeight;
 	mPostviewFormat = static_cast<EImageFormat>(android::MtkCamUtils::FmtUtils::queryImageioFormat(mShotParam.ms8PostviewDisplayFormat));
+
+	//
+	if(mu4W_yuv<=1600 && mu4H_yuv<=1200) {
+		mHdrRoundTotal = 1;
+	} else {
+		mHdrRoundTotal = 2;
+	}
+	MY_DBG("[updateInfo] - mHdrRoundTotal=%d", mHdrRoundTotal);
 
 	FUNCTION_LOG_END;
 	return ret;
@@ -102,12 +209,6 @@ MBOOL
 HdrShot::
 decideCaptureMode()
 {
-#if 0	//kidd
-	//@TODO decide EV at here
-	MY_ERR("decideCaptureMode() is a deprecated function");
-	MY_ERR("TODO get 3a information");
-	return MFALSE;
-#else
 	FUNCTION_LOG_START;
 	MINT32	ret = MTRUE;
 
@@ -155,7 +256,6 @@ decideCaptureMode()
 lbExit:
 	FUNCTION_LOG_END;
 	return	ret;
-#endif
 }
 
 
@@ -256,39 +356,17 @@ EVBracketCapture(void)
 	//allocate buffer for first only for speed up capture time
 	MUINT32	i = 0;
 	if(ret) {
-		//extraced from requestSourceImgBuf()
-		mpSourceImgBuf[i].size = mu4SourceSize;
-		if (allocMem(&mpSourceImgBuf[i]))	// mpSourceImgBuf[i].virtAddr is NULL, allocation fail.
-		{
-			MY_ERR("[requestBufs] mpSourceImgBuf[%d] fails to request %d bytes.", i, mu4SourceSize);
-			ret = MFALSE;
-			goto lbExit;
-		}
-		//extraced from requestFirstRunSourceImgBuf()
-		mu4FirstRunSourceSize = mu4W_first * mu4H_first * 3/2;	// I420 Size.
-		//MY_VERB("[requestBufs] mu4SourceSize: %d.", mu4FirstRunSourceSize);
-		mpFirstRunSourceImgBuf[i].size = mu4FirstRunSourceSize;
-		if (allocMem(&mpFirstRunSourceImgBuf[i]))	// mpSourceImgBuf[i].virtAddr is NULL, allocation fail.
-		{
-			MY_ERR("[requestBufs] mpSourceImgBuf[%d] fails to request %d bytes.", i, mu4SourceSize);
-			ret = MFALSE;
-			goto lbExit;
-		}
-		//extraced from requestSmallImgBuf()
-		mu4SmallImgSize = mu4W_small * mu4H_small;	// Y800 size.
-		mpSmallImgBuf[i].size = mu4SmallImgSize;
-		if(allocMem(&mpSmallImgBuf[i]))
-		{
-			MY_ERR("[requestBufs] mpSmallImgBuf[%d] fails to request %d bytes.", i, mu4SmallImgSize);
-			ret = MFALSE;
-			goto lbExit;
-		}
+        #if HDR_SPEEDUP_BURSTSHOT
+		pthread_create(&mCaptureIMemThread, NULL, HdrShot::allocateCaptureMemoryTask_All, this);
+        #else
+		//allocate buffers for first capture
+        ret = ret && allocateCaptureMemoryTask_First(this);
 		//allocate other buffers in thread for time saving
-		pthread_create(&mCaptureIMemThread, NULL, HdrShot::allocateCaptureMemoryTask, this);
+		pthread_create(&mCaptureIMemThread, NULL, HdrShot::allocateCaptureMemoryTask_Others, this);
+        #endif
 	}
 #endif
 
-	//@TODO refactory
 	switch(mHdrRoundTotal) {
 		case 1:	//single run
 			ret = ret
@@ -519,12 +597,9 @@ Blending(void)
 	MyDbgTimer DbgTmr("capture");
 #endif
 
-	#if HDR_SPEEDUP_JPEG
-	if(mHdrRound==2) {
+	if(mHdrRoundTotal==1 || mHdrRound==2) {
 		pthread_create(&mNormalJpegThread, NULL, HdrShot::createNormalJpegImgTask, this);
 	}
-	#endif
-
 
 	// (A)	fusion
 	CPTLog(Event_HdrShot_Fusion, CPTFlagStart);
@@ -551,6 +626,15 @@ Blending(void)
                                             #endif
 	;
 
+	if(mHdrRoundTotal==1 || mHdrRound==2) {
+	      //  ()  Release HDR working buffer because it's no longer needed.
+        ret = ret && releaseHdrWorkingBuf()
+                                            #if (HDR_PROFILE_CAPTURE2)
+                                            &&  DbgTmr.print("HdrProfiling2:: releaseHdrWorkingBuf Time")
+                                            #endif
+        ;
+    }
+
 	// post view
 	if(mHdrRound==1) {
 		ret = ret
@@ -572,69 +656,42 @@ Blending(void)
 		;
 	}
 
-	//	()	encode normal jpeg
-	#if ! HDR_SPEEDUP_JPEG
-	HdrShot::createNormalJpegImgTask(this);
-	#endif
-	#if HDR_SPEEDUP_JPEG
-	if(mHdrRoundTotal==1) {
-		pthread_create(&mNormalJpegThread, NULL, HdrShot::createNormalJpegImgTask, this);
-	}
-	#endif
-
-	// result image
-	if(mHdrRoundTotal==1 || mHdrRound==2) {
-#if HDR_SPEEDUP_JPEG
+    //  ()  release source image
+    if(mHdrRoundTotal==1 || mHdrRound==2) {
 		//	()	wait for saving normal jpeg
 		pthread_join(mNormalJpegThread, NULL);
 		mNormalJpegThread = NULL;
-#endif
-		ret = ret
-	      //  ()  Request Result Image Buffer to put image (which is resized to original size) for JPG encode.
-	    &&  requestResultImgBuf()
-	                                            #if (HDR_PROFILE_CAPTURE2)
-	                                            &&  DbgTmr.print("HdrProfiling2:: requestResultImgBuf Time")
-	                                            #endif
-	      //  ()  encode jpeg and call handleJpegData()
-		&&	createHdrJpegImgTask(this)
-	                                            #if (HDR_PROFILE_CAPTURE2)
-	                                            &&  DbgTmr.print("HdrProfiling:: createHdrJpegImg Time")
-	                                            #endif
-	      //  ()  Release HDR working buffer because it's no longer needed.
-	    &&  releaseHdrWorkingBuf()
+
+    	ret = ret
+        // keep this after mNormalJpegThread done !
+        //  ()  encode jpeg and call handleJpegData()
+        //  ()  Release SourceImgBuf[i] because it's no longer needed.
+    	&& releaseSourceImgBuf()
                                             #if (HDR_PROFILE_CAPTURE2)
-                                            &&  DbgTmr.print("HdrProfiling2:: releaseHdrWorkingBuf Time")
+                                            &&  DbgTmr.print("HdrProfiling2:: releaseSourceImgBuf Time")
+                                            #endif
+    	;
+
+		ret = ret
+	      //  ()  encode jpeg and call handleJpegData()
+		&& createHdrJpegImgTask(this)
+	                                            #if (HDR_PROFILE_CAPTURE2)
+	                                            &&  DbgTmr.print("HdrProfiling:: createHdrJpegImgTask Time")
                                             #endif
 		;
-	}
+    } else {
+    	ret = ret
+        //  ()  Release FirstRunSourceImgBuf[i] because it's no longer needed.
+    	&& releaseFirstRunSourceImgBuf()
+                                            #if (HDR_PROFILE_CAPTURE2)
+                                            &&  DbgTmr.print("HdrProfiling2:: releaseSourceImgBuf Time")
+                                            #endif
+    	;
+    }
 
 	releaseBlendingBuf();	//[ION]
 
-	if(mHdrRoundTotal==1 || mHdrRound==2) {
-		ret = ret
-	      //  ()  encode jpeg and call handleJpegData()
-      //  ()  Release SourceImgBuf[i] because it's no longer needed.
-		&& releaseSourceImgBuf()
-                                            #if (HDR_PROFILE_CAPTURE2)
-                                            &&  DbgTmr.print("HdrProfiling2:: releaseSourceImgBuf Time")
-                                            #endif
-		;
-	} else {
-		ret = ret
-      //  ()  Release FirstRunSourceImgBuf[i] because it's no longer needed.
-		&& releaseFirstRunSourceImgBuf()
-                                            #if (HDR_PROFILE_CAPTURE2)
-                                            &&  DbgTmr.print("HdrProfiling2:: releaseSourceImgBuf Time")
-                                            #endif
-		;
-	}
-
 lbExit:
-	if(mHdrRoundTotal==1 || mHdrRound==2) {
-	    releasePostviewImgBuf();
-	    releaseResultImgBuf();
-	}
-
 	CPTLog(Event_HdrShot_Blending, CPTFlagEnd);
 	FUNCTION_LOG_END;
 	return ret;
@@ -938,8 +995,8 @@ requestNormalJpegBuf(void)
 	FUNCTION_LOG_START;
 	MBOOL	ret = MTRUE;
 
-	mNormalJpegBuf.size = mu4W_yuv * mu4H_yuv;
-	if(allocMem(&mNormalJpegBuf))
+	mNormalJpegBuf.size = mShotParam.mi4PictureWidth* mShotParam.mi4PictureHeight;
+	if(allocMem_Kernel(&mNormalJpegBuf))
 		ret = MFALSE;
 
 	MY_DBG("[requestNormalJpegBuf] mNormalJpegBuf.virtAddr: 0x%08X.",	mNormalJpegBuf.virtAddr);
@@ -982,7 +1039,7 @@ requestNormalThumbnailJpegBuf(void)
 	MBOOL	ret = MTRUE;
 
 	mNormalThumbnailJpegBuf.size = mJpegParam.mi4JpegThumbWidth * mJpegParam.mi4JpegThumbHeight;
-	if(allocMem(&mNormalThumbnailJpegBuf))
+	if(allocMem_Kernel(&mNormalThumbnailJpegBuf))
 		ret = MFALSE;
 
 	MY_DBG("[requestNormalThumbnailJpegBuf] mNormalThumbnailJpegBuf.virtAddr: 0x%08X.",	mNormalThumbnailJpegBuf.virtAddr);
@@ -1023,9 +1080,8 @@ requestHdrJpegBuf(void)
 {
 	FUNCTION_LOG_START;
 	MBOOL	ret = MTRUE;
-
-	mHdrJpegBuf.size = mu4W_yuv * mu4H_yuv;
-	if(allocMem(&mHdrJpegBuf))
+	mHdrJpegBuf.size = mShotParam.mi4PictureWidth * mShotParam.mi4PictureHeight;
+	if(allocMem_Kernel(&mHdrJpegBuf))
 		ret = MFALSE;
 
 	MY_DBG("[requestHdrJpegBuf] mHdrJpegBuf.virtAddr: 0x%08X.",	mHdrJpegBuf.virtAddr);
@@ -1068,7 +1124,7 @@ requestHdrThumbnailJpegBuf(void)
 	MBOOL	ret = MTRUE;
 
 	mHdrThumbnailJpegBuf.size = mJpegParam.mi4JpegThumbWidth * mJpegParam.mi4JpegThumbHeight;
-	if(allocMem(&mHdrThumbnailJpegBuf))
+	if(allocMem_Kernel(&mHdrThumbnailJpegBuf))
 		ret = MFALSE;
 
 	MY_DBG("[requestHdrThumbnailJpegBuf] mHdrThumbnailJpegBuf.virtAddr: 0x%08X.",	mHdrThumbnailJpegBuf.virtAddr);
@@ -1124,6 +1180,7 @@ requestHdrWorkingBuf(void)
 	ret = ret && mpHdrHal->MavWorkingBuffSizeGet(mu4W_small, mu4H_small, &mavBufferSize);
 	if(!ret) {
 		MY_ERR("can't get mav working buffer size");
+        ret = MFALSE;
 		goto lbExit;
 	}
 	MY_DBG("mavBufferSize=%d", mavBufferSize);
@@ -1134,21 +1191,10 @@ requestHdrWorkingBuf(void)
 
 	// d) For HDR Working Buffer.
 	mpHdrWorkingBuf.size = mu4HdrWorkingBufSize;
-#if 0
-	if(mpIMemDrv->allocVirtBuf(&mpHdrWorkingBuf)) {
-		ret = MFALSE;
-	}
-#else
-	SetThreadProp(SCHED_OTHER, -20);
-	mpHdrWorkingBuf.virtAddr = (MUINT32)malloc(mpHdrWorkingBuf.size);
-	touchVirtualMemory((MUINT8*)mpHdrWorkingBuf.virtAddr, mpHdrWorkingBuf.size);
-	SetThreadProp(mCapturePolicy, mCapturePriority);
-	if(!mpHdrWorkingBuf.virtAddr) {
-		ret = MFALSE;
-	}
-#endif
-	mTotalBufferSize += mpHdrWorkingBuf.size;
-	MY_DBG("allocMem total=%d\n", mTotalBufferSize);
+    if(allocMem_User(&mpHdrWorkingBuf, MFALSE, MFALSE)) {
+        ret = MFALSE;
+		goto lbExit;
+    }
 
 	MY_DBG("[requestHdrWorkingBuf] mu4HdrWorkingBufSize    : %d.", mu4HdrWorkingBufSize);
 	MY_DBG("[requestHdrWorkingBuf] mpHdrWorkingBuf.virtAddr: 0x%08X.",	mpHdrWorkingBuf.virtAddr);
@@ -1178,13 +1224,13 @@ releaseHdrWorkingBuf(void)
 
 	// For HDR Working Buffer.
 	if(mpHdrWorkingBuf.virtAddr) {
-#if 0
-		mpIMemDrv->freeVirtBuf(&mpHdrWorkingBuf);
-#else
 		free((void*)mpHdrWorkingBuf.virtAddr);
-#endif
 		mTotalBufferSize -= mpHdrWorkingBuf.size;
-		MY_DBG("deallocMem total=%d\n", mTotalBufferSize);
+		mTotalUserBufferSize -= mpHdrWorkingBuf.size;
+    	MY_DBG("deallocMem total=%d user=%d kernel=%d\n"
+            , mTotalBufferSize
+            , mTotalUserBufferSize
+            , mTotalKernelBufferSize);
 	}
 	mpHdrWorkingBuf.virtAddr = NULL;
 
@@ -1489,103 +1535,6 @@ releasePostviewImgBuf()
 }
 
 
-
-///////////////////////////////////////////////////////////////////////////
-/// @brief Request ResultImg buffer.
-///
-/// @return SUCCDSS (TRUE) or Fail (FALSE).
-///////////////////////////////////////////////////////////////////////////
-MBOOL
-HdrShot::
-requestResultImgBuf(void)
-{
-	FUNCTION_LOG_START;
-	MBOOL	ret = MTRUE;
-
-	mu4ResultImgSize = mu4W_yuv * mu4H_yuv * 3/2;	// * 3/2: I420 size.
-	mpResultImgBuf.size = mu4ResultImgSize;
-	if(allocMem(&mpResultImgBuf))
-		ret = MFALSE;
-
-	MY_VERB("[requestResultImgBuf] mu4ResultImgSize       : %d.", mu4ResultImgSize);
-	MY_VERB("[requestResultImgBuf] mpResultImgBuf.virtAddr: 0x%08X.",	mpResultImgBuf.virtAddr);
-	MY_VERB("[requestResultImgBuf] mpResultImgBuf.phyAddr : 0x%08X.",	mpResultImgBuf.phyAddr);
-	MY_VERB("[requestResultImgBuf] mpResultImgBuf.size    : %d.",		mpResultImgBuf.size);
-
-lbExit:
-	if	( ! ret )
-	{
-		releaseResultImgBuf();
-	}
-
-	FUNCTION_LOG_END;
-	return	ret;
-}
-
-
-/*******************************************************************************
-*
-*******************************************************************************/
-MBOOL
-HdrShot::
-releaseResultImgBuf()
-{
-	FUNCTION_LOG_START;
-	MBOOL	ret = MTRUE;
-
-	deallocMem(&mpResultImgBuf);
-
-	FUNCTION_LOG_END;
-	return	ret;
-}
-
-
-#if 0
-/*******************************************************************************
-*
-*******************************************************************************/
-MBOOL
-HdrShot::
-requestWeightingBuf(void)
-{
-	FUNCTION_LOG_START;
-	MBOOL	ret = MTRUE;
-
-	for (MUINT32 i = 0; i < mu4OutputFrameNum; i++)
-	{
-		mWeightingBuf[i].size = mu4W_small * mu4H_small / 4;
-		allocMem(&mWeightingBuf[i]);
-	}
-
-lbExit:
-	if	( ! ret )
-	{
-		releaseWeightingBuf();
-	}
-
-	FUNCTION_LOG_END;
-	return	ret;
-}
-
-
-MBOOL
-HdrShot::
-releaseWeightingBuf()
-{
-	FUNCTION_LOG_START;
-	MBOOL	ret = MTRUE;
-
-	MUINT32 u4OutputFrameNum = OutputFrameNumGet();
-	for (MUINT32 i = 0; i < u4OutputFrameNum; i++) {
-		deallocMem(&mWeightingBuf[i]);
-	}
-
-	FUNCTION_LOG_END;
-	return	ret;
-}
-#endif
-
-
 #if 1
 /*******************************************************************************
 *
@@ -1666,83 +1615,6 @@ dumpToFile(
 }
 
 
-#if 0
-/******************************************************************************
-* save the buffer to the file
-*******************************************************************************/
-static bool
-saveBufToFile(char const*const fname, MUINT8 *const buf, MUINT32 const size)
-{
-    int nw, cnt = 0;
-    uint32_t written = 0;
-
-    MY_DBG("(name, buf, size) = (%s, %x, %d)", fname, buf, size);
-    MY_DBG("opening file [%s]\n", fname);
-    int fd = ::open(fname, O_RDWR | O_CREAT | O_TRUNC);
-    if (fd < 0) {
-        MY_ERR("failed to create file [%s]: %s", fname, ::strerror(errno));
-        return false;
-    }
-
-    MY_DBG("writing %d bytes to file [%s]\n", size, fname);
-    while (written < size) {
-        nw = ::write(fd,
-                     buf + written,
-                     size - written);
-        if (nw < 0) {
-            MY_ERR("failed to write to file [%s]: %s", fname, ::strerror(errno));
-            break;
-        }
-        written += nw;
-        cnt++;
-    }
-    MY_DBG("done writing %d bytes to file [%s] in %d passes\n", size, fname, cnt);
-    ::close(fd);
-    return true;
-}
-#endif
-
-
-/******************************************************************************
-*   read the file to the buffer
-*******************************************************************************/
-static uint32_t
-loadFileToBuf(char const*const fname, uint8_t*const buf, uint32_t size)
-{
-    int nr, cnt = 0;
-    uint32_t readCnt = 0;
-
-    MY_DBG("opening file [%s]\n", fname);
-    int fd = ::open(fname, O_RDONLY);
-    if (fd < 0) {
-        MY_ERR("failed to create file [%s]: %s", fname, strerror(errno));
-        return readCnt;
-    }
-    //
-    if (size == 0) {
-        size = ::lseek(fd, 0, SEEK_END);
-        ::lseek(fd, 0, SEEK_SET);
-    }
-    //
-    MY_DBG("read %d bytes from file [%s]\n", size, fname);
-    while (readCnt < size) {
-	    MY_DBG("readCnt=%d size=%d\n", readCnt, size);
-        //nr = ::read(fd, buf + readCnt, 102400);
-        nr = ::read(fd, buf + readCnt, size - readCnt);
-        if (nr < 0) {
-            MY_ERR("failed to read from file [%s]: %s",
-                        fname, strerror(errno));
-            break;
-        }
-        readCnt += nr;
-        cnt++;
-    }
-    MY_DBG("done reading %d bytes to file [%s] in %d passes\n", size, fname, cnt);
-    ::close(fd);
-
-    return readCnt;
-}
-
 /******************************************************************************
 *
 *******************************************************************************/
@@ -1760,6 +1632,22 @@ fgCamShotNotifyCb(MVOID* user, NSCamShot::CamShotNotifyInfo const msg)
         {
             pHdrShot->mpShotCallback->onCB_Shutter(true,0);
 			pHdrShot->mShutterCBDone = MTRUE;
+
+
+        #if HDR_SPEEDUP_BURSTSHOT
+        	MUINT32	threadRet = 0;
+        	pthread_join(pHdrShot->mCaptureIMemThread, (void**)&threadRet);
+        	pHdrShot->mCaptureIMemThread = NULL;
+        	if(!threadRet) {
+        		MY_ERR("join mCaptureIMemThread fail");
+        		ret = MFALSE;
+        		//break;
+        	}
+        	pthread_create(&pHdrShot->mProcessIMemThread, NULL, HdrShot::allocateProcessMemoryTask, pHdrShot);
+
+            ret = ret
+                && pHdrShot->updateYUVBufferAddress();
+        #endif
         }
     }
 
@@ -1767,6 +1655,57 @@ fgCamShotNotifyCb(MVOID* user, NSCamShot::CamShotNotifyInfo const msg)
     return ret;
 }
 
+
+MBOOL
+HdrShot::
+updateYUVBufferAddress()
+{
+	FUNCTION_LOG_START;
+
+	MBOOL	ret = MTRUE;
+	MUINT32	stride[3];
+
+    // update buffers for pass2
+    //
+	// (1) regist mpSourceImgBuf
+	GetStride(mu4W_yuv, eImgFmt_I420, stride);
+	NSCamHW::ImgInfo	sourceImgInfo(eImgFmt_I420, mu4W_yuv, mu4H_yuv);
+    for(MUINT32 i=0; i<mu4OutputFrameNum; i++) {
+    	NSCamHW::BufInfo	sourceBufInfo(mpSourceImgBuf[i].size
+                                        , mpSourceImgBuf[i].virtAddr
+                                        , mpSourceImgBuf[i].phyAddr
+                                        , mpSourceImgBuf[i].memID);
+    	mYUVBufInfoPort1[i] = NSCamHW::ImgBufInfo(sourceImgInfo, sourceBufInfo, stride);
+    }
+    if(mHdrRoundTotal==1) {
+    	// (2) regist mpSmallImgBuf
+    	GetStride(mu4W_small, eImgFmt_Y800, stride);
+    	NSCamHW::ImgInfo	smallImgInfo(eImgFmt_Y800, mu4W_small, mu4H_small);
+        for(MUINT32 i=0; i<mu4OutputFrameNum; i++) {
+        	NSCamHW::BufInfo smallBufInfo(mpSmallImgBuf[i].size
+                                        , mpSmallImgBuf[i].virtAddr
+                                        , mpSmallImgBuf[i].phyAddr
+                                        , mpSmallImgBuf[i].memID);
+        	mYUVBufInfoPort2[i] = NSCamHW::ImgBufInfo(smallImgInfo, smallBufInfo, stride);
+    		mpCamExif[i] = new CamExif; //@TODO
+        }
+    } else {
+    	// (2') regist mpFirstRunSourceImgBuf
+    	GetStride(mu4W_first, eImgFmt_I420, stride);
+    	NSCamHW::ImgInfo	firstImgInfo(eImgFmt_I420, mu4W_first, mu4H_first);
+        for(MUINT32 i=0; i<mu4OutputFrameNum; i++) {
+        	NSCamHW::BufInfo firstBufInfo(mpFirstRunSourceImgBuf[i].size
+                                        , mpFirstRunSourceImgBuf[i].virtAddr
+                                        , mpFirstRunSourceImgBuf[i].phyAddr
+                                        , mpFirstRunSourceImgBuf[i].memID);
+        	mYUVBufInfoPort2[i] = NSCamHW::ImgBufInfo(firstImgInfo, firstBufInfo, stride);
+    		mpCamExif[i] = new CamExif; //@TODO
+        }
+    }
+
+	FUNCTION_LOG_END;
+    return ret;
+}
 
 /******************************************************************************
 *
@@ -1778,29 +1717,20 @@ fgCamShotDataCb(MVOID* user, NSCamShot::CamShotDataInfo  const msg)
 	FUNCTION_LOG_START;
 	MBOOL	ret = MTRUE;
 
-#if 0
+#if HDR_SPEEDUP_BURSTSHOT
     HdrShot *pHdrShot = reinterpret_cast<HdrShot *>(user);
     if (NULL != pHdrShot)
     {
 		switch(msg.msgType) {
-			case NSCamShot::ECamShot_DATA_MSG_BAYER:
-	            pHdrShot->handleBayerData( msg.puData, msg.u4Size);
-				break;
-			#if 0	//@TODO deprecated
-			case NSCamShot::ECamShot_DATA_MSG_YUV:
-	            pHdrShot->handleYuvData( msg.puData, msg.u4Size);
-				break;
 			case NSCamShot::ECamShot_DATA_MSG_POSTVIEW:
-	            pHdrShot->handlePostViewData( msg.puData, msg.u4Size);
+                MY_DBG("[fgCamShotDataCb] ECamShot_DATA_MSG_POSTVIEW start");
+	            pHdrShot->update3AExif(pHdrShot->mpCamExif[pHdrShot->mCaptueIndex]);
+                pHdrShot->mCaptueIndex++;
+                MY_DBG("[fgCamShotDataCb] ECamShot_DATA_MSG_POSTVIEW end");
 				break;
-			case NSCamShot::ECamShot_DATA_MSG_JPEG:
-	            pHdrShot->handleJpegData(msg.puData, msg.u4Size, reinterpret_cast<MUINT8*>(msg.ext1), msg.ext2);
-				break;
-			#endif
 		}
     }
 #endif
-
 	FUNCTION_LOG_END;
     return ret;
 }
@@ -1867,7 +1797,13 @@ handleJpegData(MUINT8* const puJpegBuf, MUINT32 const u4JpegSize, MUINT8* const 
 {
 	FUNCTION_LOG_START;
 	MBOOL ret = MTRUE;
-    MY_DBG("[handleJpegData] + (puJpgBuf, jpgSize, puThumbBuf, thumbSize) = (%p, %d, %p, %d)", puJpegBuf, u4JpegSize, puThumbBuf, u4ThumbSize);
+    MY_DBG("[handleJpegData] + (puJpgBuf, jpgSize, puThumbBuf, thumbSize, u4Index, bFinal) = (%p, %d, %p, %d, %d, %d)"
+            , puJpegBuf
+            , u4JpegSize
+            , puThumbBuf
+            , u4ThumbSize
+            , u4Index
+            , bFinal);
 
 	if(mTestMode) {
 	    MY_ERR("[%s] mTestMode", __FUNCTION__);
@@ -1884,13 +1820,14 @@ handleJpegData(MUINT8* const puJpegBuf, MUINT32 const u4JpegSize, MUINT8* const 
     MY_DBG("[handleJpegData] (thumbbuf, size, exifHeaderBuf, size) = (%p, %d, %p, %d)",
                       puThumbBuf, u4ThumbSize, puExifHeaderBuf, u4ExifHeaderSize);
     // Jpeg callback
-    mpShotCallback->onCB_CompressedImage(0,
-                                         u4JpegSize,
-                                         reinterpret_cast<uint8_t const*>(puJpegBuf),
-                                         u4ExifHeaderSize,	//header size
-                                         puExifHeaderBuf,	//header buf
-                                         u4Index,			//callback index
-                                         bFinal				//final image
+    mpShotCallback->onCB_CompressedImage(0
+                                         , u4JpegSize
+                                         , reinterpret_cast<uint8_t const*>(puJpegBuf)
+                                         , u4ExifHeaderSize	//header size
+                                         , puExifHeaderBuf	//header buf
+                                         , u4Index			//callback index
+                                         , bFinal			//final image
+                                         , bFinal ? MTK_CAMERA_MSG_EXT_DATA_COMPRESSED_IMAGE : MTK_CAMERA_MSG_EXT_DATA_HDR
                                          );
 	mJpegCBDone = MTRUE;
     delete [] puExifHeaderBuf;
@@ -1911,50 +1848,6 @@ createSourceAndSmallImg(void)
 	FUNCTION_LOG_START;
 	MBOOL ret = MTRUE;
 
-#if HDR_DEBUG_OFFLINE_SOURCE_IMAGE
-	if(mTestMode) {
-		MY_DBG("[createSourceAndSmallImg] - offline");
-
-		//source
-	    for(int i=0; i<mu4OutputFrameNum; i++) {
-#if	HDR_SPEEDUP_MALLOC == 1
-			if(i==1) {
-				MUINT32	threadRet = 0;
-				pthread_join(mCaptureIMemThread, (void**)&threadRet);
-				mCaptureIMemThread = NULL;
-				if(!threadRet) {
-					MY_ERR("join mCaptureIMemThread fail");
-					ret = MFALSE;
-					break;
-				}
-				pthread_create(&mProcessIMemThread, NULL, HdrShot::allocateProcessMemoryTask, this);
-			}
-#endif
-			char yuvfile[128];
-			#if HDR_DEBUG_FORCE_SINGLE_RUN
-			sprintf(yuvfile, HDR_DEBUG_OUTPUT_FOLDER"hdr_sample_1600x1200_%d.i420", i);
-			#else
-			//sprintf(yuvfile, HDR_DEBUG_OUTPUT_FOLDER"hdr_sample_4000x3000_%d.i420", i);
-			sprintf(yuvfile, HDR_DEBUG_OUTPUT_FOLDER"hdr_sample_3264x2448_%d.i420", i);
-			#endif
-
-			uint32_t nReadSize = loadFileToBuf(yuvfile, (uint8_t*)mpSourceImgBuf[i].virtAddr, mu4SourceSize);
-			if(nReadSize < mpSourceImgBuf[i].size) {
-				MY_DBG("[createSourceAndSmallImg] can't read enought data");
-				ret = MFALSE;
-			}
-			mpCamExif[i] = new CamExif;
-	    }
-
-		//small
-		ret = ret && createSmallImg();
-
-		goto lbCaptureDone;
-	}
-#endif
-
-{
-	MY_DBG("[createSourceAndSmallImg] - online");
     NSCamShot::ISingleShot *pSingleShot = NSCamShot::ISingleShot::createInstance(eShotMode_HdrShot, "testshot");
     //
     pSingleShot->init();
@@ -1980,7 +1873,6 @@ createSourceAndSmallImg(void)
 	NSCamShot::SensorParam rSensorParam(static_cast<MUINT32>(MtkCamUtils::DevMetaInfo::queryHalSensorDev(getOpenId())),                             //Device ID
                              ACDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG,         //Scenaio
                              10,                                       //bit depth
-                             //@TODO MFALSE,                                   //bypass delay
                              MFALSE,                                   //bypass delay
                              MFALSE                                   //bypass scenario
                             );
@@ -1988,17 +1880,56 @@ createSourceAndSmallImg(void)
 	//pSingleShot->setCallbacks(fgCamShotNotifyCb, fgCamShotDataCb, this);
 	MY_DBG("pSingleShot->setCallbacks");
 	pSingleShot->setCallbacks(fgCamShotNotifyCb, NULL, this);
-	//
     pSingleShot->setShotParam(rShotParam);
-    //
     //pSingleShot->setJpegParam(rJpegParam);
 
-    //u4OutputFrameNum
 #if !HDR_DEBUG_SKIP_3A
     NS3A::Hal3ABase* p3AHal = NS3A::Hal3ABase::createInstance(MtkCamUtils::DevMetaInfo::queryHalSensorDev(getOpenId()));
     NS3A::CaptureParam_T rCap3AParam;
 #endif
 
+
+#if HDR_SPEEDUP_BURSTSHOT   //inteval between frams is as same as delay VD (80~120ms)
+    NSCamShot::IBurstShot *pBurstShot = NSCamShot::IBurstShot::createInstance(eShotMode_HdrShot, "testshot");
+    pBurstShot->init();
+	pBurstShot->setCallbacks(fgCamShotNotifyCb, fgCamShotDataCb, this);
+    pBurstShot->setShotParam(rShotParam);
+    pBurstShot->disableNotifyMsg(0xFFFFFFFF);
+    pBurstShot->enableNotifyMsg(NSCamShot::ECamShot_NOTIFY_MSG_EOF);
+	pBurstShot->enableDataMsg(	NSCamShot::ECamShot_DATA_MSG_YUV
+						      | NSCamShot::ECamShot_DATA_MSG_POSTVIEW);
+
+    mYUVBufInfoPort1 = new ImgBufInfo[mu4OutputFrameNum];
+    mYUVBufInfoPort2 = new ImgBufInfo[mu4OutputFrameNum];
+    NS3A::CaptureParam_T *pCap3AParam = new NS3A::CaptureParam_T[mu4OutputFrameNum];
+
+    {
+    	//MUINT32	stride[3];
+    	// (3)	regist mpSourceImgBuf
+    	pBurstShot->registerImgBufInfo(NSCamShot::ECamShot_BUF_TYPE_YUV, mYUVBufInfoPort1, mu4OutputFrameNum);
+
+    	// (4)	regist mpSmallImgBuf
+    	pBurstShot->registerImgBufInfo(NSCamShot::ECamShot_BUF_TYPE_POSTVIEW, mYUVBufInfoPort2, mu4OutputFrameNum);
+
+        #if 1
+        // (5)  regist AE
+        for(MUINT32 i=0; i<mu4OutputFrameNum; i++) {
+    		p3AHal->getCaptureParams(i, 0, rCap3AParam);
+    		pCap3AParam[i] = rCap3AParam;
+        	pBurstShot->registerCap3AParam(pCap3AParam, mu4OutputFrameNum);
+        }
+        #endif
+    }
+
+    pBurstShot->start(rSensorParam, mu4OutputFrameNum);
+
+    delete [] mYUVBufInfoPort1;
+    delete [] mYUVBufInfoPort2;
+    delete [] pCap3AParam;
+
+    pBurstShot->uninit();
+    pBurstShot->destroyInstance();
+#else   //singleshot, very very slowly (inteval between frams is ~300ms)
     for(int i=0; i<mu4OutputFrameNum; i++) {
 #if	HDR_SPEEDUP_MALLOC == 1
 		if(i==1) {
@@ -2046,7 +1977,6 @@ createSourceAndSmallImg(void)
 		p3AHal->getCaptureParams(i, 0, rCap3AParam);
 		p3AHal->updateCaptureParams(rCap3AParam);
 #endif
-		//@TODO rSensorParam.fgBypassScenaio= (0 != i) ? true : false;
 		CPTLog(Event_HdrShot_SingleCapture, CPTFlagStart);
 		pSingleShot->startOne(rSensorParam);
 		CPTLog(Event_HdrShot_SingleCapture, CPTFlagEnd);
@@ -2055,6 +1985,7 @@ createSourceAndSmallImg(void)
 		mpCamExif[i] = new CamExif;
 		update3AExif(mpCamExif[i]);	//@TODO release mpCamExif[i]
 	}
+#endif
 
 
 #if !HDR_DEBUG_SKIP_3A
@@ -2064,13 +1995,11 @@ createSourceAndSmallImg(void)
     pSingleShot->uninit();
     //
     pSingleShot->destroyInstance();
-}
 
 
 lbCaptureDone:
 	if(!ret) goto lbExit;
 
-	//@TODO dump raw when mDebugMode==1
 	if(CUST_HDR_DEBUG || HDR_DEBUG_SAVE_SOURCE_IMAGE || mDebugMode) {
 		for (MUINT32 i = 0; i < mu4OutputFrameNum; i++)
 		{
@@ -2105,51 +2034,6 @@ createSourceAndFirstRunSourceImg(void)
 	FUNCTION_LOG_START;
 	MBOOL ret = MTRUE;
 
-#if HDR_DEBUG_OFFLINE_SOURCE_IMAGE
-	if(mTestMode) {
-		MY_DBG("[createSourceAndFirstRunSourceImg] - offline");
-
-		//source
-	    for(int i=0; i<mu4OutputFrameNum; i++) {
-#if	HDR_SPEEDUP_MALLOC == 1
-			if(i==1) {
-				MUINT32	threadRet = 0;
-				pthread_join(mCaptureIMemThread, (void**)&threadRet);
-				mCaptureIMemThread = NULL;
-				if(!threadRet) {
-					MY_ERR("join mCaptureIMemThread fail");
-					ret = MFALSE;
-					break;
-				}
-				pthread_create(&mProcessIMemThread, NULL, HdrShot::allocateProcessMemoryTask, this);
-			}
-#endif
-
-			char yuvfile[128];
-			#if HDR_DEBUG_FORCE_SINGLE_RUN
-			sprintf(yuvfile, HDR_DEBUG_OUTPUT_FOLDER"hdr_sample_1600x1200_%d.i420", i);
-			#else
-			//sprintf(yuvfile, HDR_DEBUG_OUTPUT_FOLDER"hdr_sample_4000x3000_%d.i420", i);
-			sprintf(yuvfile, HDR_DEBUG_OUTPUT_FOLDER"hdr_sample_3264x2448_%d.i420", i);
-			#endif
-
-			uint32_t nReadSize = loadFileToBuf(yuvfile, (uint8_t*)mpSourceImgBuf[i].virtAddr, mu4SourceSize);
-			if(nReadSize < mpSourceImgBuf[i].size) {
-				MY_DBG("[createSourceAndFirstRunSourceImg] can't read enought data");
-				ret = MFALSE;
-			}
-			mpCamExif[i] = new CamExif;
-	    }
-
-		//first run source
-		ret = ret && createFirstRunSourceImg();
-
-		goto lbCaptureDone;
-	}
-#endif
-
-{
-	MY_DBG("[createSourceAndFirstRunSourceImg] - online");
     NSCamShot::ISingleShot *pSingleShot = NSCamShot::ISingleShot::createInstance(eShotMode_HdrShot, "testshot");
     //
     pSingleShot->init();
@@ -2175,15 +2059,12 @@ createSourceAndFirstRunSourceImg(void)
 	NSCamShot::SensorParam rSensorParam(static_cast<MUINT32>(MtkCamUtils::DevMetaInfo::queryHalSensorDev(getOpenId())),                             //Device ID
                              ACDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG,         //Scenaio
                              10,                                       //bit depth
-                             //@TODO MFALSE,                                   //bypass delay
                              MFALSE,                                   //bypass delay
                              MFALSE                                   //bypass scenario
                             );
 	//
-	pSingleShot->setCallbacks(fgCamShotNotifyCb, fgCamShotDataCb, this);
-	//
+	pSingleShot->setCallbacks(fgCamShotNotifyCb, NULL, this);
     pSingleShot->setShotParam(rShotParam);
-    //
     //pSingleShot->setJpegParam(rJpegParam);
 
 #if !HDR_DEBUG_SKIP_3A
@@ -2191,6 +2072,46 @@ createSourceAndFirstRunSourceImg(void)
     NS3A::CaptureParam_T rCap3AParam;
 #endif
 
+#if HDR_SPEEDUP_BURSTSHOT   //inteval between frams is as same as delay VD (80~120ms)
+    NSCamShot::IBurstShot *pBurstShot = NSCamShot::IBurstShot::createInstance(eShotMode_HdrShot, "testshot");
+    pBurstShot->init();
+	pBurstShot->setCallbacks(fgCamShotNotifyCb, fgCamShotDataCb, this);
+    pBurstShot->setShotParam(rShotParam);
+    pBurstShot->disableNotifyMsg(0xFFFFFFFF);
+    pBurstShot->enableNotifyMsg(NSCamShot::ECamShot_NOTIFY_MSG_EOF);
+	pBurstShot->enableDataMsg(	NSCamShot::ECamShot_DATA_MSG_YUV
+						      | NSCamShot::ECamShot_DATA_MSG_POSTVIEW);
+
+    mYUVBufInfoPort1 = new ImgBufInfo[mu4OutputFrameNum];
+    mYUVBufInfoPort2 = new ImgBufInfo[mu4OutputFrameNum];
+    NS3A::CaptureParam_T *pCap3AParam = new NS3A::CaptureParam_T[mu4OutputFrameNum];
+    {
+    	MUINT32	stride[3];
+    	// (3)	regist mpSourceImgBuf
+    	pBurstShot->registerImgBufInfo(NSCamShot::ECamShot_BUF_TYPE_YUV, mYUVBufInfoPort1, mu4OutputFrameNum);
+
+    	// (4)	regist mpFirstRunSourceImgBuf
+    	pBurstShot->registerImgBufInfo(NSCamShot::ECamShot_BUF_TYPE_POSTVIEW, mYUVBufInfoPort2, mu4OutputFrameNum);
+
+        #if 1
+        // (5)  regist AE
+        for(MUINT32 i=0; i<mu4OutputFrameNum; i++) {
+    		p3AHal->getCaptureParams(i, 0, rCap3AParam);
+    		pCap3AParam[i] = rCap3AParam;
+        	pBurstShot->registerCap3AParam(pCap3AParam, mu4OutputFrameNum);
+        }
+        #endif
+    }
+
+    pBurstShot->start(rSensorParam, mu4OutputFrameNum);
+
+    delete [] mYUVBufInfoPort1;
+    delete [] mYUVBufInfoPort2;
+    delete [] pCap3AParam;
+
+    pBurstShot->uninit();
+    pBurstShot->destroyInstance();
+#else   //singleshot, very very slowly (inteval between frams is ~300ms)
     for(int i=0; i<mu4OutputFrameNum; i++) {
 #if	HDR_SPEEDUP_MALLOC == 1
 		if(i==1) {
@@ -2239,7 +2160,6 @@ createSourceAndFirstRunSourceImg(void)
 		p3AHal->getCaptureParams(i, 0, rCap3AParam);
 		p3AHal->updateCaptureParams(rCap3AParam);
 #endif
-		//@TODO rSensorParam.fgBypassScenaio= (0 != i) ? true : false;
 		CPTLog(Event_HdrShot_SingleCapture, CPTFlagStart);
 		pSingleShot->startOne(rSensorParam);
 		CPTLog(Event_HdrShot_SingleCapture, CPTFlagEnd);
@@ -2249,6 +2169,7 @@ createSourceAndFirstRunSourceImg(void)
 		mpCamExif[i] = new CamExif;
 		update3AExif(mpCamExif[i]);	//@TODO release mpCamExif[i]
 	}
+#endif  //@TEST
 
 #if !HDR_DEBUG_SKIP_3A
 	p3AHal->destroyInstance();
@@ -2257,13 +2178,11 @@ createSourceAndFirstRunSourceImg(void)
     pSingleShot->uninit();
     //
     pSingleShot->destroyInstance();
-}
 
 lbCaptureDone:
 
 	if(!ret) goto lbExit;
 
-	//@TODO dump raw when mDebugMode==1
 	if(CUST_HDR_DEBUG || HDR_DEBUG_SAVE_SOURCE_IMAGE || mDebugMode) {
 		for (MUINT32 i = 0; i < mu4OutputFrameNum; i++)
 		{
@@ -2671,11 +2590,6 @@ createNormalJpegImgTask(MVOID* arg)
 
 	HdrShot *self = (HdrShot*)arg;
 
-	//HDR
-	if(!self->mfgIsForceBreak) {
-		ret = ret && (MBOOL)self->encodeHdrThumbnailJpeg(arg);
-	}
-
 	//NORMAL
 	if(!self->mfgIsForceBreak) {
 		ret = ret && (MBOOL)self->encodeNormalThumbnailJpeg(arg);
@@ -2696,8 +2610,61 @@ createNormalJpegImgTask(MVOID* arg)
 
 MVOID*
 HdrShot::
-allocateCaptureMemoryTask(MVOID* arg)
+allocateCaptureMemoryTask_First(MVOID* arg)
 {
+	SetThreadProp(SCHED_OTHER, -20);
+
+	FUNCTION_LOG_START;
+	MBOOL 	ret = MTRUE;
+	HdrShot *self = (HdrShot*)arg;
+
+	MUINT32	i = 0;
+
+	//extraced from requestSourceImgBuf()
+	self->mpSourceImgBuf[i].size = self->mu4SourceSize;
+	if (self->allocMem(&self->mpSourceImgBuf[i]))	// mpSourceImgBuf[i].virtAddr is NULL, allocation fail.
+	{
+		MY_ERR("[requestBufs] mpSourceImgBuf[%d] fails to request %d bytes.", i, self->mu4SourceSize);
+		ret = MFALSE;
+		goto lbExit;
+	}
+
+	//extraced from requestFirstRunSourceImgBuf()
+	self->mu4FirstRunSourceSize = self->mu4W_first * self->mu4H_first * 3/2;	// I420 Size.
+	//MY_VERB("[requestBufs] mu4SourceSize: %d.", mu4FirstRunSourceSize);
+	self->mpFirstRunSourceImgBuf[i].size = self->mu4FirstRunSourceSize;
+	if (self->allocMem(&self->mpFirstRunSourceImgBuf[i]))	// mpSourceImgBuf[i].virtAddr is NULL, allocation fail.
+	{
+		MY_ERR("[requestBufs] mpSourceImgBuf[%d] fails to request %d bytes.", i, self->mu4SourceSize);
+		ret = MFALSE;
+		goto lbExit;
+	}
+
+	//extraced from requestSmallImgBuf()
+	self->mu4SmallImgSize = self->mu4W_small * self->mu4H_small;	// Y800 size.
+	self->mpSmallImgBuf[i].size = self->mu4SmallImgSize;
+	if(self->allocMem(&self->mpSmallImgBuf[i]))
+	{
+		MY_ERR("[requestBufs] mpSmallImgBuf[%d] fails to request %d bytes.", i, self->mu4SmallImgSize);
+		ret = MFALSE;
+		goto lbExit;
+	}
+
+	if(!ret) {
+		MY_ERR("can't alloc memory");
+	}
+lbExit:
+	FUNCTION_LOG_END;
+    return (MVOID*)ret;
+}
+
+
+MVOID*
+HdrShot::
+allocateCaptureMemoryTask_Others(MVOID* arg)
+{
+	SetThreadProp(SCHED_OTHER, -20);
+
 	FUNCTION_LOG_START;
 	MBOOL 	ret = MTRUE;
 
@@ -2713,6 +2680,31 @@ allocateCaptureMemoryTask(MVOID* arg)
 #else
 	ret = MFALSE;
 #endif
+
+	if(!ret) {
+		MY_ERR("can't alloc memory");
+	}
+lbExit:
+	FUNCTION_LOG_END;
+    return (MVOID*)ret;
+}
+
+
+MVOID*
+HdrShot::
+allocateCaptureMemoryTask_All(MVOID* arg)
+{
+	SetThreadProp(SCHED_OTHER, -20);
+
+	FUNCTION_LOG_START;
+	MBOOL 	ret = MTRUE;
+	HdrShot *self = (HdrShot*)arg;
+
+	MUINT32	i = 0;
+    ret = ret
+        && allocateCaptureMemoryTask_First(self)
+        && allocateCaptureMemoryTask_Others(self)
+        ;
 
 	if(!ret) {
 		MY_ERR("can't alloc memory");
@@ -2762,7 +2754,7 @@ encodeNormalThumbnailJpeg(MVOID *arg)
 	NSCamHW::ImgBufInfo	sourceImgBufInfo(sourceImgInfo, sourceBufInfo, stride);
 
 	//rThumbImgBufInfo
-	requestNormalThumbnailJpegBuf();
+	ret = ret && requestNormalThumbnailJpegBuf();
 	NSCamHW::ImgInfo		rThumbImgInfo(eImgFmt_JPEG, mJpegParam.mi4JpegThumbWidth, mJpegParam.mi4JpegThumbHeight);
 	NSCamHW::BufInfo		rThumbBufInfo(mNormalThumbnailJpegBuf.size, mNormalThumbnailJpegBuf.virtAddr, mNormalThumbnailJpegBuf.phyAddr, mNormalThumbnailJpegBuf.memID);
 	NSCamHW::ImgBufInfo		rThumbImgBufInfo(rThumbImgInfo, rThumbBufInfo, stride);
@@ -2771,7 +2763,7 @@ encodeNormalThumbnailJpeg(MVOID *arg)
     if (0 != mJpegParam.mi4JpegThumbWidth && 0 != mJpegParam.mi4JpegThumbHeight)
     {
     	//EXIF add SOI tag
-        NSCamShot::JpegParam rParam(mJpegParam.mu4JpegThumbQuality, MFALSE);
+        NSCamShot::JpegParam rParam(mJpegParam.mu4JpegThumbQuality, MTRUE);
         ret = ret && createJpegImg(sourceImgBufInfo, rParam, mShotParam.mi4Rotation, 0, rThumbImgBufInfo, mNormalThumbnailJpegBufSize);
     }
 
@@ -2797,8 +2789,8 @@ encodeNormalJpeg(MVOID *arg)
 
 	//rJpegImgBufInfo
 	//IMEM_BUF_INFO	mNormalJpegBuf;
-	requestNormalJpegBuf();
-	NSCamHW::ImgInfo		rJpegImgInfo(eImgFmt_JPEG, mu4W_yuv, mu4H_yuv);
+	ret = ret && requestNormalJpegBuf();
+	NSCamHW::ImgInfo		rJpegImgInfo(eImgFmt_JPEG, mShotParam.mi4PictureWidth, mShotParam.mi4PictureHeight);
 	NSCamHW::BufInfo		rJpegBufInfo(mNormalJpegBuf.size, mNormalJpegBuf.virtAddr, mNormalJpegBuf.phyAddr, mNormalJpegBuf.memID);
 	NSCamHW::ImgBufInfo		rJpegImgBufInfo(rJpegImgInfo, rJpegBufInfo, stride);
 
@@ -2818,52 +2810,13 @@ saveNormalJpeg(MVOID *arg)
 	FUNCTION_LOG_START;
 	MBOOL 	ret = MTRUE;
 
-	// prepare exif buffer
-    MUINT8 *puExifHeaderBuf = new MUINT8[128 * 1024];
-    MUINT32 u4ExifHeaderSize = 0;
-    updateThumbnailExif(mpCamExif[1]
-						, (MUINT8*)mNormalThumbnailJpegBuf.virtAddr, mNormalThumbnailJpegBufSize
-    					, puExifHeaderBuf, u4ExifHeaderSize);
+	MUINT32	u4Index = 0;
+	MBOOL	bFinal = MTRUE;
 
-	//combine exif & bit stream
-	MUINT32 u4JpegSize = mNormalJpegBufSize;
-	MUINT8 *puImageBuffer = new MUINT8[u4ExifHeaderSize+u4JpegSize];
-	memcpy(puImageBuffer, puExifHeaderBuf, u4ExifHeaderSize);
-	memcpy(puImageBuffer+u4ExifHeaderSize, (MUINT8*)mNormalJpegBuf.virtAddr, u4JpegSize);
-
-	#if 0
-    MY_DBG("[handleJpegData] (thumbbuf, size, exifHeaderBuf, size) = (%p, %d, %p, %d)",
-                      puThumbBuf, u4ThumbSize, puExifHeaderBuf, u4ExifHeaderSize);
-
-    MY_DBG("[handleJpegData] (size: thumb=%d, header=%d, main=%d, all=%d)",
-                      u4ThumbSize, puExifHeaderBuf, u4JpegSize, u4ExifHeaderSize+u4JpegSize);
-	#endif
-
-	#if 0
-	//for MR1
-	if(!mTestMode) {
-	    mpShotCallback->onCB_RawImage(0
-	    							, u4ExifHeaderSize+u4JpegSize
-	                                , reinterpret_cast<uint8_t const*>(puImageBuffer)
-	                                );
-	}
-	mRawCBDone = MTRUE;
-	dumpToFile(mShotParam.ms8ShotFileName, puImageBuffer, u4ExifHeaderSize+u4JpegSize);
-	delete puImageBuffer;
-    delete [] puExifHeaderBuf;
-	#else
-	//MY_ERR("saveNormalJpeg filename = %s", mShotParam.ms8ShotFileName.string());
-	HdrFileInfo *pFileInfo = new HdrFileInfo;
-	pFileInfo->buffer = puImageBuffer;
-	pFileInfo->size = u4ExifHeaderSize+u4JpegSize;
-	pFileInfo->filename = mShotParam.ms8ShotFileName;
-	//pFileInfo->filename = String8("/sdcard/test.jpg");
-
-	mRawCBDone = MTRUE;
-	pthread_create(&mSaveJpegThread, NULL, HdrShot::saveFileTask, pFileInfo);
-    delete [] puExifHeaderBuf;
-	#endif
-
+    // Jpeg callback, it contains thumbnail in ext1, ext2.
+    handleJpegData((MUINT8*)mNormalJpegBuf.virtAddr, mNormalJpegBufSize
+    				, (MUINT8*)mNormalThumbnailJpegBuf.virtAddr, mNormalThumbnailJpegBufSize
+    				, 0, 0);
 
 	FUNCTION_LOG_END;
 	return (MVOID*)ret;
@@ -2904,7 +2857,11 @@ createHdrJpegImgTask(MVOID* arg)
 
 	HdrShot *self = (HdrShot*)arg;
 
-	//ret = ret && (MBOOL)self->encodeHdrThumbnailJpeg(arg);
+	//HDR
+	if(!self->mfgIsForceBreak) {
+		ret = ret && (MBOOL)self->encodeHdrThumbnailJpeg(arg);
+	}
+    self->releasePostviewImgBuf();
 	if(!self->mfgIsForceBreak ) {
 		ret = ret && (MBOOL)self->encodeHdrJpeg(arg);
 	}
@@ -2936,7 +2893,7 @@ encodeHdrThumbnailJpeg(MVOID *arg)
 	NSCamHW::ImgBufInfo		rPostViewImgBufInfo(rPostViewImgInfo, rPostViewBufInfo, u4Stride);
 
 	//rThumbImgBufInfo
-	requestHdrThumbnailJpegBuf();
+	ret = ret && requestHdrThumbnailJpegBuf();
 	NSCamHW::ImgInfo		rThumbImgInfo(eImgFmt_JPEG, mJpegParam.mi4JpegThumbWidth, mJpegParam.mi4JpegThumbHeight);
 	NSCamHW::BufInfo		rThumbBufInfo(mHdrThumbnailJpegBuf.size, mHdrThumbnailJpegBuf.virtAddr, mHdrThumbnailJpegBuf.phyAddr, mHdrThumbnailJpegBuf.memID);
 	NSCamHW::ImgBufInfo		rThumbImgBufInfo(rThumbImgInfo, rThumbBufInfo, stride);
@@ -2945,7 +2902,7 @@ encodeHdrThumbnailJpeg(MVOID *arg)
     if (0 != mJpegParam.mi4JpegThumbWidth && 0 != mJpegParam.mi4JpegThumbHeight)
     {
     	//EXIF add SOI tag
-        NSCamShot::JpegParam rParam(mJpegParam.mu4JpegThumbQuality, MFALSE);
+        NSCamShot::JpegParam rParam(mJpegParam.mu4JpegThumbQuality, MTRUE);
         ret = ret && createJpegImg(rPostViewImgBufInfo, rParam, mShotParam.mi4Rotation, 0, rThumbImgBufInfo, mHdrThumbnailJpegBufSize);
     }
 
@@ -2977,8 +2934,8 @@ encodeHdrJpeg(MVOID *arg)
 	NSCamHW::ImgBufInfo		rYuvImgBufInfo(rYuvImgInfo, rYuvBufInfo, u4Stride);
 
 	//rJpegImgBufInfo
-	requestHdrJpegBuf();
-	NSCamHW::ImgInfo		rJpegImgInfo(eImgFmt_JPEG, mu4W_yuv, mu4H_yuv);
+	ret = ret && requestHdrJpegBuf();
+	NSCamHW::ImgInfo		rJpegImgInfo(eImgFmt_JPEG, mShotParam.mi4PictureWidth, mShotParam.mi4PictureHeight);
 	NSCamHW::BufInfo		rJpegBufInfo(mHdrJpegBuf.size, mHdrJpegBuf.virtAddr, mHdrJpegBuf.phyAddr, mHdrJpegBuf.memID);
 	NSCamHW::ImgBufInfo		rJpegImgBufInfo(rJpegImgInfo, rJpegBufInfo, stride);
 
@@ -3019,195 +2976,6 @@ saveHdrJpeg(MVOID *arg)
 }
 
 
-MBOOL
-HdrShot::
-createJpegImgWithThumbnail(NSCamHW::ImgBufInfo const &rYuvImgBufInfo, NSCamHW::ImgBufInfo const &rPostViewImgBufInfo, MUINT32 const u4Index, MBOOL bFinal)
-{
-	FUNCTION_LOG_START;
-	MBOOL ret = MTRUE;
-
-#if 1	//convert into ImgBufInfo
-	MUINT32	stride[3];
-
-	//rJpegImgBufInfo
-	IMEM_BUF_INFO	jpegBuf;
-	jpegBuf.size = mu4W_yuv * mu4H_yuv;
-	#if 1	//test
-	if(allocMem(&jpegBuf)) {
-		ret = MFALSE;
-	}
-	#else
-	mpIMemDrv->allocVirtBuf(&jpegBuf);
-	#endif
-	NSCamHW::ImgInfo		rJpegImgInfo(eImgFmt_JPEG, mu4W_yuv, mu4H_yuv);
-	NSCamHW::BufInfo		rJpegBufInfo(jpegBuf.size, jpegBuf.virtAddr, jpegBuf.phyAddr, jpegBuf.memID);
-	NSCamHW::ImgBufInfo		rJpegImgBufInfo(rJpegImgInfo, rJpegBufInfo, stride);
-
-	//rThumbImgBufInfo
-	IMEM_BUF_INFO	thumbBuf;
-	thumbBuf.size = mJpegParam.mi4JpegThumbWidth * mJpegParam.mi4JpegThumbHeight;
-	#if 1	//test
-	if(allocMem(&thumbBuf)) {
-		ret = MFALSE;
-	}
-	#else
-	mpIMemDrv->allocVirtBuf(&thumbBuf);
-	#endif
-	NSCamHW::ImgInfo		rThumbImgInfo(eImgFmt_JPEG, mJpegParam.mi4JpegThumbWidth, mJpegParam.mi4JpegThumbHeight);
-	NSCamHW::BufInfo		rThumbBufInfo(thumbBuf.size, thumbBuf.virtAddr, thumbBuf.phyAddr, thumbBuf.memID);
-	NSCamHW::ImgBufInfo		rThumbImgBufInfo(rThumbImgInfo, rThumbBufInfo, stride);
-#endif
-
-    MUINT32 u4JpegSize = 0;
-    MUINT32 u4ThumbSize = 0;
-    // create jpeg bitstreawm
-    //ImgBufInfo rJpegImgBufInfo = queryJpegImgBufInfo();
-    //ImgBufInfo rThumbImgBufInfo = queryThumbImgBufInfo();
-        // jpeg param
-    	//EXIF add SOI tag
-    NSCamShot::JpegParam yuvJpegParam(mJpegParam.mu4JpegQuality, MFALSE);
-    ret = ret && createJpegImg(rYuvImgBufInfo, yuvJpegParam, mShotParam.mi4Rotation, 0 , rJpegImgBufInfo, u4JpegSize);
-
-    // (3.1) create thumbnail
-    // If postview is enable, use postview buffer,
-    // else use yuv buffer to do thumbnail
-    if (0 != mJpegParam.mi4JpegThumbWidth && 0 != mJpegParam.mi4JpegThumbHeight)
-    {
-    	//EXIF add SOI tag
-        NSCamShot::JpegParam rParam(mJpegParam.mu4JpegThumbQuality, MFALSE);
-        ret = ret && createJpegImg(rPostViewImgBufInfo, rParam, mShotParam.mi4Rotation, 0, rThumbImgBufInfo, u4ThumbSize);
-    }
-
-	if(HDR_DEBUG_SAVE_HDR_JPEG || mDebugMode) {
-		if(bFinal) {
-			char szFileName[100];
-
-			::sprintf(szFileName, HDR_DEBUG_OUTPUT_FOLDER "%04d_a_rJpegImgBufInfo_%dx%d_r%d.jpg", mu4RunningNumber, mu4W_yuv, mu4H_yuv, mHdrRound);
-			dumpToFile(szFileName, (MUINT8*)jpegBuf.virtAddr, u4JpegSize);
-
-			::sprintf(szFileName, HDR_DEBUG_OUTPUT_FOLDER "%04d_b_rThumbImgBufInfo_%dx%d_r%d.jpg", mu4RunningNumber, mJpegParam.mi4JpegThumbWidth, mJpegParam.mi4JpegThumbHeight, mHdrRound);
-			dumpToFile(szFileName, (MUINT8*)thumbBuf.virtAddr, u4ThumbSize);
-		}
-	}
-
-
-	if(bFinal) {
-	    // Jpeg callback, it contains thumbnail in ext1, ext2.
-	    handleJpegData((MUINT8*)rJpegImgBufInfo.u4BufVA, u4JpegSize, (MUINT8*)rThumbImgBufInfo.u4BufVA, u4ThumbSize, u4Index, bFinal);
-	} else {
-	#if 1
-		// prepare exif buffer
-	    MUINT8 *puExifHeaderBuf = new MUINT8[128 * 1024];
-	    MUINT32 u4ExifHeaderSize = 0;
-		MUINT8	*puThumbBuf = (MUINT8*)rThumbImgBufInfo.u4BufVA;
-	    updateThumbnailExif(mpCamExif[1]
-							, puThumbBuf, u4ThumbSize
-	    					, puExifHeaderBuf, u4ExifHeaderSize);
-
-		//combine exif & bit stream
-		MUINT8 *puImageBuffer = new MUINT8[u4ExifHeaderSize+u4JpegSize];
-		memcpy(puImageBuffer, puExifHeaderBuf, u4ExifHeaderSize);
-		memcpy(puImageBuffer+u4ExifHeaderSize, (MUINT8*)jpegBuf.virtAddr, u4JpegSize);
-
-	    MY_DBG("[handleJpegData] (thumbbuf, size, exifHeaderBuf, size) = (%p, %d, %p, %d)",
-	                      puThumbBuf, u4ThumbSize, puExifHeaderBuf, u4ExifHeaderSize);
-
-	    MY_DBG("[handleJpegData] (size: thumb=%d, header=%d, main=%d, all=%d)",
-	                      u4ThumbSize, puExifHeaderBuf, u4JpegSize, u4ExifHeaderSize+u4JpegSize);
-		dumpToFile(mShotParam.ms8ShotFileName, puImageBuffer, u4ExifHeaderSize+u4JpegSize);
-
-		#if 1
-		//for MR1
-	    mpShotCallback->onCB_RawImage(0
-	    							, u4ExifHeaderSize+u4JpegSize
-	                                , reinterpret_cast<uint8_t const*>(puImageBuffer)
-	                                );
-		mRawCBDone = MTRUE;
-		#endif
-
-		delete puImageBuffer;
-	    delete [] puExifHeaderBuf;
-
-	#else
-		dumpToFile(mShotParam.ms8ShotFileName, (MUINT8*)jpegBuf.virtAddr, u4JpegSize);
-	#endif
-	}
-
-lbExit:
-	#if 1	//test
-	deallocMem(&jpegBuf);
-	deallocMem(&thumbBuf);
-	#else
-	mpIMemDrv->freeVirtBuf(&jpegBuf);
-	mpIMemDrv->freeVirtBuf(&thumbBuf);
-	#endif
-
-	FUNCTION_LOG_END;
-    return ret;
-}
-
-MBOOL
-HdrShot::
-createHdrJpegImg()
-{
-	FUNCTION_LOG_START;
-	MBOOL ret = MTRUE;
-	MUINT32 		u4Stride[3];
-
-	//mrHdrCroppedResult as rYuvImgBufInfo
-	MUINT32 				u4HdrCroppedResultSize = mrHdrCroppedResult.output_image_width * mrHdrCroppedResult.output_image_height * 3 / 2;
-	MUINT32					rYuvSize = mrHdrCroppedResult.output_image_width * mrHdrCroppedResult.output_image_height * 3/2;	//NV21
-	GetStride(mrHdrCroppedResult.output_image_width, eImgFmt_I420, u4Stride);
-	NSCamHW::ImgInfo		rYuvImgInfo(eImgFmt_I420, mrHdrCroppedResult.output_image_width , mrHdrCroppedResult.output_image_height);
-	NSCamHW::BufInfo		rYuvBufInfo(u4HdrCroppedResultSize, (MUINT32)mrHdrCroppedResult.output_image_addr, 0, mpHdrWorkingBuf.memID);
-	NSCamHW::ImgBufInfo		rYuvImgBufInfo(rYuvImgInfo, rYuvBufInfo, u4Stride);
-
-	//mpPostviewImgBuf as rPostViewBufInfo
-	GetStride(mPostviewWidth, mPostviewFormat, u4Stride);
-	NSCamHW::ImgInfo		rPostViewImgInfo(mPostviewFormat, mPostviewWidth, mPostviewHeight);
-	NSCamHW::BufInfo		rPostViewBufInfo(mpPostviewImgBuf.size, mpPostviewImgBuf.virtAddr, mpPostviewImgBuf.phyAddr, mpPostviewImgBuf.memID);
-	NSCamHW::ImgBufInfo		rPostViewImgBufInfo(rPostViewImgInfo, rPostViewBufInfo, u4Stride);
-
-	CPTLog(Event_HdrShot_SaveHdr, CPTFlagStart);
-	ret = createJpegImgWithThumbnail(rYuvImgBufInfo
-									, rPostViewImgBufInfo
-									//, 1			//index
-									, 0			//index
-									, MTRUE);	//is final jpeg?
-	CPTLog(Event_HdrShot_SaveHdr, CPTFlagEnd);
-
-	FUNCTION_LOG_END;
-    return ret;
-}
-
-
-MBOOL
-HdrShot::
-createNormalJpegImg()
-{
-	FUNCTION_LOG_START;
-	MBOOL 	ret = MTRUE;
-
-	MUINT32 stride[3];
-	MUINT32	i = OutputFrameNumGet()/2;
-
-	GetStride(mu4W_yuv, eImgFmt_I420, stride);
-	NSCamHW::ImgInfo	sourceImgInfo(eImgFmt_I420, mu4W_yuv, mu4H_yuv);
-	NSCamHW::BufInfo	sourceBufInfo(mpSourceImgBuf[i].size, mpSourceImgBuf[i].virtAddr, mpSourceImgBuf[i].phyAddr, mpSourceImgBuf[i].memID);
-	NSCamHW::ImgBufInfo	sourceImgBufInfo(sourceImgInfo, sourceBufInfo, stride);
-
-	CPTLog(Event_HdrShot_SaveNormal, CPTFlagStart);
-	ret = createJpegImgWithThumbnail(sourceImgBufInfo
-									, sourceImgBufInfo
-									, 0			//index
-									, MFALSE);	//is final jpeg?
-	CPTLog(Event_HdrShot_SaveNormal, CPTFlagEnd);
-
-	FUNCTION_LOG_END;
-    return ret;
-}
-
-
 /*******************************************************************************
 *
 ********************************************************************************/
@@ -3225,24 +2993,10 @@ saveSourceJpg(void)
 
 }
 
-#if 0	//@TODO deprecated
-MBOOL
-HdrShot::
-saveRaw(void)
-{
-	FUNCTION_LOG_START;
-    MBOOL ret = MTRUE;
-
-	FUNCTION_LOG_END;
-    return  ret;
-
-}
-#endif
 
 /*******************************************************************************
 * JPG encode
 *******************************************************************************/
-//kidd check those
 HdrState_e
 HdrShot::
 GetHdrState(void)
@@ -3416,23 +3170,76 @@ uninit()
 *******************************************************************************/
 MUINT32
 HdrShot::
-allocMem_Blocking(IMEM_BUF_INFO *memBuf)
+allocMem_User(IMEM_BUF_INFO *memBuf, MBOOL touch, MBOOL mapping)
 {
 	FUNCTION_LOG_START;
 	MBOOL ret = 0;
+	SetThreadProp(SCHED_OTHER, -20);
+
+	MY_DBG("touch=%d mapping=%d\n", touch, mapping);
 
 	mTotalBufferSize += memBuf->size;
+    mTotalUserBufferSize += memBuf->size;
 	MY_DBG("allocMem size=%d\n", memBuf->size);
-	MY_DBG("allocMem total=%d\n", mTotalBufferSize);
+	MY_DBG("allocMem total=%d user=%d kernel=%d\n"
+        , mTotalBufferSize
+        , mTotalUserBufferSize
+        , mTotalKernelBufferSize);
+
+    memBuf->memID = -1;
+    memBuf->virtAddr = (MUINT32)malloc(memBuf->size);
+    if(!memBuf->virtAddr) {
+        MY_ERR("malloc() error \n");
+        ret = 1;
+        goto lbExit;
+    }
+
+    if(touch){
+        // assign pages in this SCHED_OTHER thread to avoid memory killer pending
+        touchVirtualMemory((MUINT8*)memBuf->virtAddr, memBuf->size);
+    }
+
+    if(mapping) {
+    	ret = mpIMemDrv->mapPhyAddr(memBuf);
+        if (ret) {
+            MY_ERR("mpIMemDrv->mapPhyAddr() error");
+            ret = 1;
+    		goto lbExit;
+        }
+    }
+
+lbExit:
+	SetThreadProp(mCapturePolicy, mCapturePriority);
+	FUNCTION_LOG_END;
+	return ret;
+}
+
+
+/******************************************************************************
+*
+*******************************************************************************/
+MUINT32
+HdrShot::
+allocMem_Kernel(IMEM_BUF_INFO *memBuf)
+{
+	FUNCTION_LOG_START;
+	MBOOL ret = 0;
+	SetThreadProp(SCHED_OTHER, -20);
+
+	mTotalBufferSize += memBuf->size;
+    mTotalKernelBufferSize += memBuf->size;
+	MY_DBG("allocMem size=%d\n", memBuf->size);
+	MY_DBG("allocMem total=%d user=%d kernel=%d\n"
+        , mTotalBufferSize
+        , mTotalUserBufferSize
+        , mTotalKernelBufferSize);
 
 	ret = mpIMemDrv->allocVirtBuf(memBuf);
     if (ret) {
         MY_ERR("g_pIMemDrv->allocVirtBuf() error");
 		goto lbExit;
     }
-#if	HDR_SPEEDUP_MALLOC == 0
-    memset((void*)memBuf->virtAddr, 0 , memBuf->size);
-#endif
+
 	ret = mpIMemDrv->mapPhyAddr(memBuf);
     if (ret) {
         MY_ERR("mpIMemDrv->mapPhyAddr() error");
@@ -3440,64 +3247,25 @@ allocMem_Blocking(IMEM_BUF_INFO *memBuf)
     }
 
 lbExit:
+	SetThreadProp(mCapturePolicy, mCapturePriority);
 	FUNCTION_LOG_END;
 	return ret;
 }
-
-
-#if 0
-void*
-HdrShot::
-allocMemTask(void *arg)
-{
-	FUNCTION_LOG_START;
-	MBOOL 	ret = MTRUE;
-
-	//non-real-time policy
-	SetThreadProp(SCHED_OTHER, -20);
-
-	HdrMemBufInfo *memBufInfo = (HdrMemBufInfo*)arg;
-	HdrShot *self = (HdrShot*)memBufInfo->handler;
-	ret = self->allocMem_Blocking(memBufInfo->imemBufInfo);
-lbExit:
-	FUNCTION_LOG_END;
-    return (MVOID*)ret;
-}
-#endif
 
 
 MUINT32
 HdrShot::
 allocMem(IMEM_BUF_INFO *memBuf)
 {
-#if HDR_DEBUG_SKIP_MODIFY_POLICY
-	return allocMem_Blocking(memBuf);
-#else
 	FUNCTION_LOG_START;
-
 	MBOOL 	ret = MTRUE;
-	#if 0
-	MUINT32	threadRet = 0;
-
-	HdrMemBufInfo memBufInfo;
-	memBufInfo.handler = this;
-	memBufInfo.imemBufInfo = memBuf;
-
-	pthread_t tempThread = NULL;
-	pthread_create(&tempThread, NULL, HdrShot::allocMemTask, &memBufInfo);
-	pthread_join(tempThread, (void**)&threadRet);
-	ret = threadRet;
-	#else
-	SetThreadProp(SCHED_OTHER, -20);
-	ret = allocMem_Blocking(memBuf);
-	SetThreadProp(mCapturePolicy, mCapturePriority);
-	#endif
+	ret = allocMem_User(memBuf, MFALSE, MTRUE);
 
 lbExit:
 	FUNCTION_LOG_END;
 	return ret;
-#endif
 }
+
 
 /******************************************************************************
 *
@@ -3511,14 +3279,28 @@ deallocMem(IMEM_BUF_INFO *memBuf)
 	}
 
 	mTotalBufferSize -= memBuf->size;
-	MY_DBG("deallocMem total=%d\n", mTotalBufferSize);
+    if(memBuf->memID == -1) {
+        mTotalUserBufferSize -= memBuf->size;
+    } else {
+        mTotalKernelBufferSize -= memBuf->size;
+    }
+	MY_DBG("deallocMem size=%d\n", memBuf->size);
+	MY_DBG("deallocMem total=%d user=%d kernel=%d\n"
+        , mTotalBufferSize
+        , mTotalUserBufferSize
+        , mTotalKernelBufferSize);
+
 
     if (mpIMemDrv->unmapPhyAddr(memBuf)) {
         MY_ERR("m_pIMemDrv->unmapPhyAddr() error");
     }
 
-    if (mpIMemDrv->freeVirtBuf(memBuf)) {
-        MY_ERR("m_pIMemDrv->freeVirtBuf() error");
+    if(memBuf->memID == -1) {
+        free((void*)memBuf->virtAddr);
+    } else {
+        if (mpIMemDrv->freeVirtBuf(memBuf)) {
+            MY_ERR("m_pIMemDrv->freeVirtBuf() error");
+        }
     }
 	memBuf->virtAddr = 0;
 
@@ -3634,10 +3416,12 @@ MBOOL
 HdrShot::
 touchVirtualMemory(MUINT8* vm, MUINT32 size)
 {
+	FUNCTION_LOG_START;
 	MBOOL	ret = MTRUE;
 	for(MUINT32 i=0; i<size; i+=4096) {
 		vm[i] = 0;
 	}
+	FUNCTION_LOG_END;
 	return MTRUE;
 }
 

@@ -387,10 +387,10 @@ p2pLaunch(
 
         printk("Launch success, fgIsP2PRegistered TRUE.\n");
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
+//#if defined(CONFIG_HAS_EARLYSUSPEND)
         /* Here, we register the early suspend and resume callback  */
-        glRegisterEarlySuspend(&mt6620_p2p_early_suspend_desc, p2p_early_suspend, p2p_late_resume);
-#endif
+//        glRegisterEarlySuspend(&mt6620_p2p_early_suspend_desc, p2p_early_suspend, p2p_late_resume);
+//#endif
 
         return TRUE;
     }
@@ -441,9 +441,9 @@ p2pRemove(
     }
     else {
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-        glUnregisterEarlySuspend(&mt6620_p2p_early_suspend_desc);
-#endif
+//#if defined(CONFIG_HAS_EARLYSUSPEND)
+//        glUnregisterEarlySuspend(&mt6620_p2p_early_suspend_desc);
+//#endif
         /*Check p2p fsm is stop or not. If not then stop now*/
         if(IS_P2P_ACTIVE(prGlueInfo->prAdapter)) {
             p2pStopImmediate(prGlueInfo);
@@ -455,6 +455,25 @@ p2pRemove(
     }
     return FALSE;
 }
+void
+p2pEalySuspendReg (
+    P_GLUE_INFO_T prGlueInfo,
+    BOOLEAN fgIsEnable
+)
+{
+ #if defined(CONFIG_HAS_EARLYSUSPEND)
+    if(prGlueInfo->prAdapter->fgIsP2PRegistered == TRUE){
+        if(fgIsEnable) {
+            /* Here, we register the early suspend and resume callback  */
+            glRegisterEarlySuspend(&mt6620_p2p_early_suspend_desc, p2p_early_suspend, p2p_late_resume);
+        }
+        else {
+            glUnregisterEarlySuspend(&mt6620_p2p_early_suspend_desc);
+        }
+    }
+ #endif
+}
+
 
 #if 0
 /*----------------------------------------------------------------------------*/

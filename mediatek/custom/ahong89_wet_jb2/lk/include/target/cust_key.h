@@ -4,7 +4,7 @@
 #include<cust_kpd.h>
 
 #define MT65XX_META_KEY		42	/* KEY_2 */
-#define MT65XX_PMIC_RST_KEY	1000	/* Invalid Key */
+#define MT65XX_PMIC_RST_KEY	1       //1000	/* Invalid Key */ //tyang
 #define MT_CAMERA_KEY 		10
 
 #define MT65XX_BOOT_MENU_KEY       1   /* KEY_VOLUMEUP */

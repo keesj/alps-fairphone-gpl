@@ -1538,8 +1538,8 @@ kal_int32 fgauge_update_dod(void)
         g_update_qmax_flag = 0;
     }
     
-    FG_dod_1 =  gFG_DOD0 - ((gFG_columb*100)/gFG_BATT_CAPACITY_aging);    
-    
+    //FG_dod_1 =  gFG_DOD0 - ((gFG_columb*100)/gFG_BATT_CAPACITY_aging);    			//modify by xchangwei 0430
+    FG_dod_1 =  gFG_DOD0 - ((gFG_columb*100*100)/(102*gFG_BATT_CAPACITY_aging));		//modify by xchangwei 0430
     if (Enable_FGADC_LOG == 1){
         xlog_printk(ANDROID_LOG_DEBUG, "Power/Battery", "[fgauge_update_dod] FG_dod_1=%d, adjust_coulomb_counter=%d, gFG_columb=%d, gFG_DOD0=%d, gFG_temp=%d, gFG_BATT_CAPACITY=%d\r\n", 
             FG_dod_1, adjust_coulomb_counter, gFG_columb, gFG_DOD0, gFG_temp, gFG_BATT_CAPACITY);
@@ -2210,6 +2210,10 @@ kal_int32 gFG_voltage_AVG = 0;
 kal_int32 gFG_vbat_offset=0;
 kal_int32 gFG_voltageVBAT=0;
 
+#define CHANGE_TRACKING_POINT						//ghong xchangwei 20140424
+#define CUST_TRACKING_POINT  0					//ghong xchangwei 20140424
+
+
 #if defined(CHANGE_TRACKING_POINT)
 int g_tracking_point = CUST_TRACKING_POINT;
 #else
@@ -2378,7 +2382,7 @@ void fgauge_Normal_Mode_Work(void)
 
         #if defined(CHANGE_TRACKING_POINT)
         gFG_15_vlot = fgauge_read_v_by_capacity( (100-g_tracking_point) );
-        xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[FGADC] gFG_15_vlot = %dmV\r\n", gFG_15_vlot);        
+        xlog_printk(ANDROID_LOG_INFO, "Power/Battery", "[FGADC] gFG_15_vlot = %dmV\r\n", gFG_15_vlot);
         #else
         //gFG_15_vlot = fgauge_read_v_by_capacity(86); //14%
         gFG_15_vlot = fgauge_read_v_by_capacity( (100-g_tracking_point) );

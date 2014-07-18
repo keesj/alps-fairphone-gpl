@@ -1238,6 +1238,12 @@ service dualmdlogger /system/bin/dualmdlogger
 #
 #sensor service (begin)
 #
+#ghong tyang add 3416
+service memsicd3416x /system/bin/memsicd3416x
+    disabled
+    oneshot
+    user system
+    group system
 
 service msensord /system/bin/msensord
     oneshot
@@ -1362,3 +1368,15 @@ service poad /system/bin/poad
     user system
     group system
     oneshot
+
+#
+# Determine the Fairphone hardware revision by looking at /proc
+#
+if cat /proc/gpufreq/gpufreq_var_dump | grep  "clk_cfg_0 = 1" >/dev/null
+then
+    # The original Fairphone we call FP1
+    setprop ro.product.model FP1
+else
+    # The upgraded Fairphone we call FP1U
+    setprop ro.product.model FP1U
+fi

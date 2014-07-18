@@ -39,14 +39,24 @@ typedef struct{
 
 /* Charging Current Setting */
 #define USB_CHARGER_CURRENT					Cust_CC_450MA
-#define AC_CHARGER_CURRENT					Cust_CC_650MA	
+#define AC_CHARGER_CURRENT					Cust_CC_900MA //ghong tyang //Cust_CC_650MA
+	
+//#define  bq24158_AC_CHARGING_CURRENT_1250
+//#define  bq24158_AC_CHARGING_CURRENT_1150
+//#define  bq24158_AC_CHARGING_CURRENT_1050
+#define  bq24158_AC_CHARGING_CURRENT_950
+//#define  bq24158_AC_CHARGING_CURRENT_850
+//#define  bq24158_AC_CHARGING_CURRENT_750
+
+#define HIGH_BATTERY_VOLTAGE_SUPPORT    //w33 support
 
 /* Battery Meter Solution */
 #define CONFIG_ADC_SOLUTION 	1
 
-/* Battery Voltage and Percentage Mapping Table */
-VBAT_TO_PERCENT Batt_VoltToPercent_Table[] = {
-	/*BattVolt,BattPercent*/
+/*Battery Voltage and Percentage Mapping Table */
+VBAT_TO_PERCENT *Batt_VoltToPercent_Table;
+/*[] = {
+	
 	{3400,0},
 	{3686,10},
 	{3740,20},
@@ -58,11 +68,59 @@ VBAT_TO_PERCENT Batt_VoltToPercent_Table[] = {
 	{4013,80},
 	{4100,90},
 	{4189,100},
+};*/
+
+//////////ghong_yliu_begin_20120827
+#if 1
+//0C
+VBAT_TO_PERCENT Batt_VoltToPercent_Table_0[] = {
+
+	{3335,0},
+	{3577,10},
+	{3722,20},
+	{3776,30},
+	{3785,40},
+	{3791,50},
+	{3824,60},
+	{3885,70},
+	{3939,80},
+	{4010,90},
+	{4181,100},
 };
+VBAT_TO_PERCENT Batt_VoltToPercent_Table_25[] = {
+	
+	{3242,0},
+	{3619,10},
+	{3751,20},
+	{3776,30},
+	{3780,40},
+	{3796,50},
+	{3863,60},
+	{3911,70},
+	{3981,80},
+	{4057,90},
+	{4172,100}
+};
+VBAT_TO_PERCENT Batt_VoltToPercent_Table_50[] = {
+
+	{3235,0},
+	{3610,10},
+	{3732,20},
+	{3767,30},
+	{3773,40},
+	{3796,50},
+	{3857,60},
+	{3913,70},
+	{3987,80},
+	{4063,90},
+	{4182,100}
+};
+#endif
+/////////ghong_yliu_end_20120827
 
 /* Precise Tunning */
-//#define BATTERY_AVERAGE_SIZE 	600
-#define BATTERY_AVERAGE_SIZE 	60
+#define BATTERY_AVERAGE_SIZE 	1200
+//#define BATTERY_AVERAGE_SIZE 	60
 
 
 #define CHARGING_IDLE_MODE	 1
@@ -82,15 +140,16 @@ VBAT_TO_PERCENT Batt_VoltToPercent_Table[] = {
 #define BACKLIGHT_KEY 10					// camera key
 
 /* Teperature related setting */
-#define RBAT_PULL_UP_R             39000
-#define RBAT_PULL_UP_VOLT          1800
+#define RBAT_PULL_UP_R             24000
+//#define RBAT_PULL_UP_VOLT          2500
+#define RBAT_PULL_UP_VOLT          1200
 //#define TBAT_OVER_CRITICAL_LOW     68237
 //#define TBAT_OVER_CRITICAL_LOW     483954
-#define TBAT_OVER_CRITICAL_LOW     67790
-#define BAT_TEMP_PROTECT_ENABLE    1
+#define TBAT_OVER_CRITICAL_LOW     70603
+#define BAT_TEMP_PROTECT_ENABLE    0
 #define BAT_NTC_10 0
 #define BAT_NTC_47 0
-#define BAT_NTC_CG103JF103F
+#define BAT_NTC_TSM_1
 
 /* The option of new charging animation */
 #define ANIMATION_NEW

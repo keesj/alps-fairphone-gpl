@@ -2,7 +2,7 @@
 #include <linux/types.h>
 
 static struct vibrator_hw cust_vibrator_hw = {
-	.vib_timer = 20,
+	.vib_timer = 35,
   #ifdef CUST_VIBR_LIMIT
 	.vib_limit = 9,
   #endif

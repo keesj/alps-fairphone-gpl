@@ -34,6 +34,6 @@
 
 #define BOARD_ID                MT6589_EVB
 
-#define CS_PART_NUMBER[0]       KMKJS000VM_B309
+#define CS_PART_NUMBER[0]       SD5C28B_16G_MMD2 //KMKJS000VM_B309
 
 #endif /* __CUSTOM_MEMORYDEVICE__ */

@@ -187,7 +187,7 @@ void sw_env()
           if(g_boot_arg->boot_reason != BR_RTC && get_env("hibboot") != NULL && atoi(get_env("hibboot")) == 1)
               video_printf(" => HIBERNATION BOOT\n");
           else
-              video_printf(" => NORMAL BOOT\n");          
+              //video_printf(" => NORMAL BOOT\n"); //fying closed         
           break;
       case ADVMETA_BOOT:
           video_printf(" => ADVANCED META MODE\n");
@@ -365,6 +365,7 @@ void platform_init(void)
     time_platform_init = get_timer(0);
     time_nand_emmc = get_timer(0);
 #endif
+    unsigned int lcd_light_delay;  //tyang
     dprintf(INFO, "platform_init()\n");
 
 #ifdef MTK_MT8193_SUPPORT
@@ -412,7 +413,8 @@ void platform_init(void)
     printf("[PROFILE] ------- load_logo takes %d ms -------- \n", get_timer(time_load_logo));
     time_backlight = get_timer(0);
 #endif
-
+    	lcd_light_delay = get_timer(0);//ghong tyang add	
+       while(get_timer(lcd_light_delay) <= 100 /* ms */);//ghong tyang add
     /*for kpd pmic mode setting*/
     set_kpd_pmic_mode();
 #ifdef MTK_BATLOWV_NO_PANEL_ON_EARLY

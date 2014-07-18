@@ -1969,6 +1969,7 @@ static MINT32 ISP_RTBC_ENQUE(MINT32 dma)
         //break;
     }
 
+#if 0
     //
     //spin_lock_irqsave(&(IspInfo.SpinLockRTBC),g_Flash_SpinLock);
     //check if buffer exist
@@ -1982,6 +1983,7 @@ static MINT32 ISP_RTBC_ENQUE(MINT32 dma)
             break;
         }
     }
+#endif
     //
     if (buffer_exist) {
         //

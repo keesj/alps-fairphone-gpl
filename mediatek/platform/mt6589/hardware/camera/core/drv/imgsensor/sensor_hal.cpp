@@ -1,3 +1,28 @@
+/********************************************************************************************
+ *     LEGAL DISCLAIMER
+ *
+ *     (Header of MediaTek Software/Firmware Release or Documentation)
+ *
+ *     BY OPENING OR USING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ *     THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE") RECEIVED
+ *     FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON AN "AS-IS" BASIS
+ *     ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES, EXPRESS OR IMPLIED,
+ *     INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+ *     A PARTICULAR PURPOSE OR NONINFRINGEMENT. NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY
+ *     WHATSOEVER WITH RESPECT TO THE SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY,
+ *     INCORPORATED IN, OR SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK
+ *     ONLY TO SUCH THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
+ *     NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S SPECIFICATION
+ *     OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+ *
+ *     BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE LIABILITY WITH
+ *     RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE, AT MEDIATEK'S OPTION,
+TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE, OR REFUND ANY SOFTWARE LICENSE
+ *     FEES OR SERVICE CHARGE PAID BY BUYER TO MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ *     THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE WITH THE LAWS
+ *     OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF LAWS PRINCIPLES.
+ ************************************************************************************************/
 #define LOG_TAG "SensorHal"
 
 #include <fcntl.h>
@@ -1787,6 +1812,10 @@ MINT32 SensorHalImp::sendCommand(
         bwc.Fps_Set((*(MUINT32 *) arg2)/10);
         LOG_MSG("  SENSOR_CMD_SET_MAX_FRAME_RATE_BY_SCENARIO: scenario = %d, frame rates = %d (10base) \n", *(MUINT32 *) arg1,*(MUINT32 *) arg2);
         break;
+    case SENSOR_CMD_SET_TEST_PATTERN_OUTPUT:
+        cmdId = CMD_SENSOR_SET_TEST_PATTERN_OUTPUT;
+        pDeviceDrv->sendCommand((SENSOR_DEV_ENUM)sensorDevId,cmdId, (MUINT32 *) arg1);
+        break;
 
     //0x2000
     case SENSOR_CMD_GET_SENSOR_DEV:
@@ -2088,6 +2117,34 @@ MINT32 SensorHalImp::sendCommand(
         }
         
         break;
+
+    case SENSOR_CMD_GET_SENSOR_SUBSAMPLING_INFO:
+        LOG_MSG("  SENSOR_CMD_GET_SENSOR_SUBSAMPLING_INFO \n");
+        if(arg3 >= ACDK_SCENARIO_ID_MAX-1) {
+            LOG_ERR("SENSOR_CMD_GET_SENSOR_SUBSAMPLING_INFO arg2 incorrect ! \n");
+        }
+        //mSensorDev = sensorDevId;
+        if(SENSOR_DEV_MAIN==sensorDevId) {
+            *(MUINT32 *) arg1 = staticSensorGrabInfo[0][arg3].u2SensorSubSpW;
+            *(MUINT32 *) arg2 = staticSensorGrabInfo[0][arg3].u2SensorSubSpH;
+        }
+        else if (SENSOR_DEV_SUB==sensorDevId) {
+            *(MUINT32 *) arg1 = staticSensorGrabInfo[1][arg3].u2SensorSubSpW;
+            *(MUINT32 *) arg2 = staticSensorGrabInfo[1][arg3].u2SensorSubSpH;
+        }
+        else if (SENSOR_DEV_MAIN_2==sensorDevId) {
+            *(MUINT32 *) arg1 = staticSensorGrabInfo[2][arg3].u2SensorSubSpW;
+            *(MUINT32 *) arg2 = staticSensorGrabInfo[2][arg3].u2SensorSubSpH;
+        }  
+        else if (SENSOR_DEV_ATV==sensorDevId) {
+            *(MUINT32 *) arg1 = staticSensorGrabInfo[3][arg3].u2SensorSubSpW;
+            *(MUINT32 *) arg2 = staticSensorGrabInfo[3][arg3].u2SensorSubSpH;
+        }  
+        else{
+            LOG_ERR("[sendCommand] sensorDevId is incorrect ! \n");
+        }
+        break;
+        
     case SENSOR_CMD_GET_DEFAULT_FRAME_RATE_BY_SCENARIO:
         cmdId = CMD_SENSOR_GET_DEFAULT_FRAME_RATE_BY_SCENARIO;
         pDeviceDrv->sendCommand((SENSOR_DEV_ENUM)sensorDevId,cmdId, (MUINT32 *) arg1, (MUINT32 *) arg2);
@@ -2100,6 +2157,10 @@ MINT32 SensorHalImp::sendCommand(
     case SENSOR_CMD_GET_SENSOR_VIEWANGLE:
         cmdId = CMD_SENSOR_GET_SENSOR_VIEWANGLE;
         pDeviceDrv->sendCommand((SENSOR_DEV_ENUM)sensorDevId,cmdId, (MUINT32 *) arg1, (MUINT32 *) arg2);                       
+        break;        
+    case SENSOR_CMD_GET_TEST_PATTERN_CHECKSUM_VALUE:
+        cmdId = CMD_SENSOR_GET_TEST_PATTERN_CHECKSUM_VALUE;
+        pDeviceDrv->sendCommand((SENSOR_DEV_ENUM)sensorDevId,cmdId, (MUINT32 *) arg1); 
         break;     
     //0x3000    
     case SENSOR_CMD_SET_YUV_FEATURE_CMD:
@@ -2173,6 +2234,15 @@ MINT32 SensorHalImp::sendCommand(
         cmdId = CMD_SENSOR_GET_YUV_AE_AWB_LOCK_INFO;
         pDeviceDrv->sendCommand((SENSOR_DEV_ENUM)sensorDevId,cmdId, (MUINT32 *) arg1, (MUINT32 *) arg2);
         break;        
+    case SENSOR_CMD_GET_YUV_STROBE_INFO:
+        cmdId = CMD_SENSOR_GET_YUV_AE_FLASHLIGHT_INFO;
+        pDeviceDrv->sendCommand((SENSOR_DEV_ENUM)sensorDevId,cmdId, (MUINT32 *) arg1);          
+        break;
+    case SENSOR_CMD_SET_YUV_AUTOTEST:
+        cmdId = CMD_SENSOR_SET_YUV_AUTOTEST;
+        pDeviceDrv->sendCommand((SENSOR_DEV_ENUM)sensorDevId,cmdId, (MUINT32 *) arg1, (MUINT32 *) arg2);
+        break;    
+        
     default:
         ret = -1;
         LOG_MSG("[sendCommand] err: 0x%x \n", cmd);
@@ -2401,16 +2471,20 @@ MINT32 SensorHalImp::querySensorInfo()
                 case SENSOR_MAIN:
                     staticSensorGrabInfo[0][scenario].u4SensorGrabStartX = sensorInfo[0].SensorGrabStartX;
                     staticSensorGrabInfo[0][scenario].u4SensorGrabStartY = sensorInfo[0].SensorGrabStartY;                    
+                    staticSensorGrabInfo[0][scenario].u2SensorSubSpW = sensorInfo[0].SensorWidthSampling;
+                    staticSensorGrabInfo[0][scenario].u2SensorSubSpH = sensorInfo[0].SensorHightSampling;  
                 break;
                 case SENSOR_SUB:
                     staticSensorGrabInfo[1][scenario].u4SensorGrabStartX = sensorInfo[1].SensorGrabStartX;
                     staticSensorGrabInfo[1][scenario].u4SensorGrabStartY = sensorInfo[1].SensorGrabStartY;                    
-
+                    staticSensorGrabInfo[1][scenario].u2SensorSubSpW = sensorInfo[1].SensorWidthSampling;
+                    staticSensorGrabInfo[1][scenario].u2SensorSubSpH = sensorInfo[1].SensorHightSampling; 
                 break;
                 case SENSOR_MAIN_2:
                     staticSensorGrabInfo[2][scenario].u4SensorGrabStartX = sensorInfo[1].SensorGrabStartX;
                     staticSensorGrabInfo[2][scenario].u4SensorGrabStartY = sensorInfo[1].SensorGrabStartY;                    
-
+                    staticSensorGrabInfo[2][scenario].u2SensorSubSpW = sensorInfo[1].SensorWidthSampling;
+                    staticSensorGrabInfo[2][scenario].u2SensorSubSpH = sensorInfo[1].SensorHightSampling; 
                 break;            
                 default:
                 break;

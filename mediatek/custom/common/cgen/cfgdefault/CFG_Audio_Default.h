@@ -28,6 +28,9 @@
 #include "../cfgfileinc/CFG_AUDIO_File.h"
 #include "../inc/sph_coeff_record_mode_default.h"
 #include "../inc/sph_coeff_dmnr_default.h"
+#ifdef MTK_HANDSFREE_DMNR_SUPPORT
+#include "../inc/sph_coeff_dmnr_handsfree_default.h"
+#endif
 #include "../inc/audio_hd_record_custom.h"
 #include "../inc/audio_acf_default.h"
 #include "../inc/audio_hcf_default.h"
@@ -37,7 +40,9 @@
 #include "../inc/audio_hd_record_48k_custom.h"
 #include "../inc/voice_recognition_custom.h"
 #include "../inc/audio_audenh_control_option.h"
-
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+#include "../inc/audio_voip_custom.h"
+#endif
 
 AUDIO_CUSTOM_PARAM_STRUCT speech_custom_default =
 {
@@ -260,6 +265,14 @@ AUDIO_CUSTOM_EXTRA_PARAM_STRUCT dual_mic_custom_default =
 {
     DEFAULT_SPEECH_DUAL_MIC_ABF_PARA,
     DEFAULT_SPEECH_DUAL_MIC_ABFWB_PARA
+#ifdef MTK_HANDSFREE_DMNR_SUPPORT
+	,\
+    DEFAULT_SPEECH_DUAL_MIC_ABF_PARA_LoudSPK,
+    DEFAULT_SPEECH_DUAL_MIC_ABFWB_PARA_LoudSPK,
+    DEFAULT_SPEECH_DUAL_MIC_ABFWB_PARA_VR,
+    DEFAULT_SPEECH_DUAL_MIC_ABFWB_PARA_VOIP,
+    DEFAULT_SPEECH_DUAL_MIC_ABFWB_PARA_VOIP_LoudSPK
+#endif
 };
 
 AUDIO_GAIN_TABLE_STRUCT Gain_control_table_default ={
@@ -327,6 +340,15 @@ VOICE_RECOGNITION_PARAM_STRUCT Voice_Recognize_Par_default = {
 AUDIO_AUDENH_CONTROL_OPTION_STRUCT AUDENH_Control_Option_Par_default = {    
     DEFAULT_AUDIO_AUDENH_CONTROL_OPTION_Coeff
 };
+
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+AUDIO_VOIP_PARAM_STRUCT Audio_VOIP_Par_default = {    
+    DEFAULT_VOIP_SPEECH_COMMON_PARAM,
+    DEFAULT_VOIP_SPEECH_MODE_PARAM,
+    DEFAULT_VOIP_IN_FIR_PARAM,
+    DEFAULT_VOIP_OUT_FIR_PARAM
+};
+#endif
 
 #endif
 

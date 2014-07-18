@@ -116,7 +116,7 @@ FID_PRE_BEGIN = 0,
     ), 
     //YUV-only feature id.
     ENUM_YUV_ONLY_SD            (
-    
+        FID_YUV_AUTOTEST,
     ), 
   //----------------------------------------------------------------------------
   FID_OVER_LAST_SD = FID_OVER_LAST_YUV_ONLY_SD, 

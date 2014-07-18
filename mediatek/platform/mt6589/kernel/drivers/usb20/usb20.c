@@ -734,10 +734,12 @@ int __init musb_platform_init(struct musb *musb)
 		musb->board_set_vbus = mtk_set_vbus;
 		#ifndef CONFIG_MT6589_FPGA
 		#ifndef MTK_BQ24196_SUPPORT
+                #ifndef MTK_BQ24158_SUPPORT
 		mt_set_gpio_mode(GPIO_OTG_DRVVBUS_PIN,GPIO_OTG_DRVVBUS_PIN_M_GPIO);//should set GPIO2 as gpio mode.
 		mt_set_gpio_dir(GPIO_OTG_DRVVBUS_PIN,GPIO_DIR_OUT);
 		mt_get_gpio_pull_enable(GPIO_OTG_DRVVBUS_PIN);
 		mt_set_gpio_pull_select(GPIO_OTG_DRVVBUS_PIN,GPIO_PULL_UP);
+		#endif
 		#endif
 		#endif
 	}

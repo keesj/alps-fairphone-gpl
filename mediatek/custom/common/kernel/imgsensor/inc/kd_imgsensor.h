@@ -58,6 +58,8 @@
 *
 ********************************************************************************/
 /* SENSOR CHIP VERSION */
+#define IMX179_SENSOR_ID                        0x0179
+
 #define MT9M114_SENSOR_ID                       0x2481
 
 #define MC501CB_SENSOR_ID                       0x0062
@@ -120,6 +122,7 @@
 #define HI542MIPI_SENSOR_ID                         0x00B1
 #define OV5647MIPI_SENSOR_ID                        0x5647
 #define OV8825_SENSOR_ID            			0x8825
+#define OV8850_SENSOR_ID            			0x8850
 #define OV12830_SENSOR_ID			  0xC830
 #define OV5648MIPI_SENSOR_ID                    0x5648
 
@@ -194,6 +197,8 @@
 #define CAMERA_HW_DEVNAME            "kd_camera_hw"
 
 /* SENSOR DEVICE DRIVER NAME */
+#define SENSOR_DRVNAME_IMX179_MIPI_RAW   "imx179mipiraw"
+
 #define SENSOR_DRVNAME_MT9M114_MIPI_YUV		"mt9m114mipiyuv"
 
 #define SENSOR_DRVNAME_MT9P012_RAW  "mt9p012"
@@ -232,6 +237,7 @@
 #define SENSOR_DRVNAME_SIV121D_YUV    	"siv121dyuv"
 #define SENSOR_DRVNAME_HI704_YUV    	"hi704yuv"
 #define SENSOR_DRVNAME_MT9V114_YUV    "mt9v114"
+#define SENSOR_DRVNAME_MT9M114_YUV    "mt9m114yuv"		//ghong_litao_12.12
 #define SENSOR_DRVNAME_MT9V115_YUV	"mt9v115yuv"
 #define SENSOR_DRVNAME_MT9T113_YUV    "mt9t113yuv"
 #define SENSOR_DRVNAME_PAS6180_SERIAL_YUV    "pas6180serialyuv"
@@ -239,6 +245,7 @@
 #define SENSOR_DRVNAME_MT9T113_MIPI_YUV    "mt9t113mipiyuv"
 #define SENSOR_DRVNAME_IMX105_MIPI_RAW   "imx105mipiraw"
 #define SENSOR_DRVNAME_OV8830_RAW   	       "ov8830"
+#define SENSOR_DRVNAME_OV8850_MIPI_RAW   	       "ov8850raw"
 #define SENSOR_DRVNAME_0V9726_RAW		"ov9726raw"
 #define SENSOR_DRVNAME_OV9726_MIPI_RAW		"ov9726mipiraw"
 #define SENSOR_DRVNAME_S5K4E1GA_MIPI_RAW   "s5k4e1gamipiraw"

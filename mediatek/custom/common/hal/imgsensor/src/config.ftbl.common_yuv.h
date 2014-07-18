@@ -227,12 +227,12 @@ FTABLE_SCENE_DEP()
     FTABLE_CONFIG_AS_TYPE_OF_DEFAULT_VALUES(
         KEY_AS_(MtkCameraParameters::KEY_FOCUS_MODE), 
         SCENE_AS_DEFAULT_SCENE(
-            ITEM_AS_DEFAULT_(MtkCameraParameters::FOCUS_MODE_AUTO), 
+            ITEM_AS_DEFAULT_(MtkCameraParameters::FOCUS_MODE_INFINITY), 
             ITEM_AS_VALUES_(
-                MtkCameraParameters::FOCUS_MODE_AUTO,   
+                //MtkCameraParameters::FOCUS_MODE_AUTO,   
                 MtkCameraParameters::FOCUS_MODE_INFINITY, 
-                MtkCameraParameters::FOCUS_MODE_CONTINUOUS_PICTURE, 
-                MtkCameraParameters::FOCUS_MODE_CONTINUOUS_VIDEO, 
+                //MtkCameraParameters::FOCUS_MODE_CONTINUOUS_PICTURE, 
+                //MtkCameraParameters::FOCUS_MODE_CONTINUOUS_VIDEO, 
             )
         ), 
         //......................................................................

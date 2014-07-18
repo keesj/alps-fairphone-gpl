@@ -1,3 +1,38 @@
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ *
+ * MediaTek Inc. (C) 2010. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
+
 #include <linux/autoconf.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -1317,8 +1352,13 @@ static void msdc_emmc_power(struct msdc_host *host,u32 on)
 	switch(host->id){
 		case 0:
 			msdc_set_smt(host,1);
-			//msdc_ldo_power(on, MT65XX_POWER_LDO_VEMC_1V8, VOL_1800, &g_msdc0_io); default on
-			msdc_ldo_power(on, MT65XX_POWER_LDO_VEMC_3V3, VOL_3300, &g_msdc0_flash);
+			if (host->mmc->card && !on && (host->mmc->card->raw_cid[0] == 0x90014a20) && (host->mmc->card->raw_cid[1] == 0x58494e59) && ( (host->mmc->card->raw_cid[2]&0xffff0000) == 0x48150000) ) {
+				//if Hynix H9TP32A8JDMCPR-KGM FW=0x15, sleep&awake flow: CMD7 -> NO power off -> CMD7
+				//else: CMD7 -> CMD5 -> power off -> power on -> CMD5 -> CMD7
+			} else {
+				//msdc_ldo_power(on, MT65XX_POWER_LDO_VEMC_1V8, VOL_1800, &g_msdc0_io); default on
+				msdc_ldo_power(on, MT65XX_POWER_LDO_VEMC_3V3, VOL_3300, &g_msdc0_flash);
+			}
 			break;
 		case 4:
 			msdc_set_smt(host,1);
@@ -1609,9 +1649,14 @@ static void msdc_eirq_sdio(void *data)
 {
     struct msdc_host *host = (struct msdc_host *)data;
 
-		N_MSG(INT, "SDIO EINT");
-				
-    mmc_signal_sdio_irq(host->mmc);
+	N_MSG(INT, "SDIO EINT");
+#ifdef SDIO_ERROR_BYPASS 
+    if(host->sdio_error != -EIO){ 	
+#endif      
+        mmc_signal_sdio_irq(host->mmc);
+#ifdef SDIO_ERROR_BYPASS 
+    } 
+#endif    
 }
 
 /* msdc_eirq_cd will not be used!  We not using EINT for card detection. */
@@ -2758,6 +2803,7 @@ static void msdc_pm(pm_message_t state, void *data)
 			msdc_pin_reset (host, MSDC_PIN_PULL_UP);
 			msdc_pin_config(host, MSDC_PIN_PULL_UP);
 			host->power_control(host,1);
+			mdelay(10);
 			msdc_restore_emmc_setting(host);
 		}
             (void)mmc_resume_host(host->mmc);
@@ -3753,7 +3799,7 @@ static int msdc_do_request(struct mmc_host*mmc, struct mmc_request*mrq)
     
     cmd  = mrq->cmd;
     data = mrq->cmd->data;
-
+	
     /* check msdc is work ok. rule is RX/TX fifocnt must be zero after last request 
      * if find abnormal, try to reset msdc first
      */
@@ -4016,7 +4062,14 @@ done:
     if (mrq->stop && (mrq->stop->error == (unsigned int)-EIO)) host->error |= REQ_STOP_EIO; 
 	if (mrq->stop && (mrq->stop->error == (unsigned int)-ETIMEDOUT)) host->error |= REQ_STOP_TMO; 
     //if (host->error) ERR_MSG("host->error<%d>", host->error);     
-	
+#ifdef SDIO_ERROR_BYPASS  
+    if(is_card_sdio(host) && !host->error){
+        host->sdio_error = 0; 
+        memset(&host->sdio_error_rec.cmd, 0, sizeof(struct mmc_command));  
+        memset(&host->sdio_error_rec.data, 0, sizeof(struct mmc_data));
+        memset(&host->sdio_error_rec.stop, 0, sizeof(struct mmc_command));
+    }	
+#endif
     return host->error;
 }
 static int msdc_tune_rw_request(struct mmc_host*mmc, struct mmc_request*mrq)
@@ -5376,15 +5429,16 @@ static void msdc_ops_request_legacy(struct mmc_host *mmc, struct mmc_request *mr
     if (mrq->cmd->opcode == 53 && host->sdio_error == -EIO){    // sdio error bypass
         if((sdio_error_count++)%SDIO_ERROR_OUT_INTERVAL == 0){  
             if(host->sdio_error_rec.cmd.opcode == 53){
-                cmd = &host->sdio_error_rec.cmd;        
-                data = &host->sdio_error_rec.data;
-                if(!data->error)
-                    data = NULL;
-                if (data) stop = &host->sdio_error_rec.stop;
-                    msdc_dump_trans_error(host, cmd, data, stop); 
-                goto sdio_error_out;    
+                spin_lock(&host->lock);
+                struct mmc_command err_cmd = host->sdio_error_rec.cmd;
+                struct mmc_data err_data = host->sdio_error_rec.data;
+                ERR_MSG("[BYPS]XXX CMD<%d><0x%x> Error<%d> Resp<0x%x>", err_cmd.opcode, err_cmd.arg, err_cmd.error, err_cmd.resp[0]); 
+                if(err_data.error)
+                    ERR_MSG("[BYPS]XXX DAT block<%d> Error<%d>", err_data.blocks, err_data.error);
+                spin_unlock(&host->lock);        
             }
        }
+       goto sdio_error_out;    
     }
 #endif
         
@@ -7454,10 +7508,15 @@ static int msdc_drv_suspend(struct platform_device *pdev, pm_message_t state)
             host->error = 0;
         }
     }
-
+      
     if (is_card_sdio(host)) 
     {
-        if (host->saved_para.suspend_flag==0)
+        if(host->clk_gate_count > 0){
+            host->error = 0;
+            return -EBUSY;
+        }
+        
+        if (host->saved_para.suspend_flag==0 )
         {
             host->saved_para.hz = host->mclk;
             if (host->saved_para.hz)

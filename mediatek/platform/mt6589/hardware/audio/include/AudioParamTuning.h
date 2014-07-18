@@ -29,14 +29,25 @@
 #include "AudioDigitalControlInterface.h"
 #include "AudioAnalogControlInterface.h"
 #include "SpeechPcm2way.h"
+#include "SpeechPhoneCallController.h"
 
 #define MAX_VOICE_VOLUME VOICE_VOLUME_MAX
 #define FILE_NAME_LEN_MAX 128
+
+#ifdef DMNR_TUNNING_AT_MODEMSIDE
 #define P2W_RECEIVER_OUT 0
 #define P2W_HEADSET_OUT 1
 #define P2W_NORMAL 0
 #define P2W_RECONLY 1
-
+#else
+#define OUTPUT_DEVICE_RECEIVER 0
+#define OUTPUT_DEVICE_HEADSET 1
+#define RECPLAY_MODE 0
+#define RECONLY_MODE 1
+#include "AudioMTKStreamManager.h"
+#include "AudioMTKStreamManagerInterface.h"
+#include "AudioSpeechEnhanceInfo.h"
+#endif
 
 typedef struct {
     unsigned short cmd_type;
@@ -82,6 +93,22 @@ typedef enum {
 	   
 	DMNR_TUNING_CMD_CNT
 }DMNRTuningCmdType;
+
+typedef struct{
+	unsigned int ChunkID;
+	unsigned int ChunkSize;
+	unsigned int Format;
+	unsigned int Subchunk1ID;
+	unsigned int Subchunk1IDSize;
+	unsigned short AudioFormat;
+	unsigned short NumChannels;
+	unsigned int SampleRate;
+	unsigned int ByteRate;
+	unsigned short BlockAlign;
+	unsigned short BitsPerSample;
+	unsigned int SubChunk2ID;
+	unsigned int SubChunk2Size;
+}WAVEHDR;
 #endif
 
 namespace android {
@@ -103,11 +130,8 @@ public:
     status_t setDLPGA(uint32 gain);
     void updataOutputFIRCoffes(AudioTasteTuningStruct *pCustParam);
     status_t enableModemPlaybackVIASPHPROC(bool bEnable, bool bWB=false);
-    status_t putDataToModem();
+    
     FILE_FORMAT playbackFileFormat();
-
-    // for playback thread
-    //rb m_sPlayBuf;
 
     // protect Play PCM With Speech Enhancement buffers
     pthread_mutex_t mPlayBufMutex;  
@@ -124,9 +148,15 @@ public:
     status_t setRecordFileName(const char *fileName);
     status_t setDMNRGain(unsigned short type, unsigned short value); //for DMNR
     status_t getDMNRGain(unsigned short type, unsigned short *value); //for DMNR
+#ifdef DMNR_TUNNING_AT_MODEMSIDE
     status_t enableDMNRModem2Way(bool bEnable, bool bWBMode, unsigned short outputDevice, unsigned short workMode);
-    status_t readDataFromModem(uint32 offset, uint32 len);
-
+#else
+    AudioMTKStreamManagerInterface *getStreamManager(){return mAudioMtkStreamManager;}
+    AudioSpeechEnhanceInfo  *getSpeechEnhanceInfoInst(){return mAudioSpeechEnhanceInfoInstance;}
+    int getPlaybackDb(){return mPlaybackDb_index;}
+    status_t setPlaybackVolume(uint32 mode, uint32 gain);
+    status_t enableDMNRAtApSide(bool bEnable, bool bWBMode, unsigned short outputDevice, unsigned short workMode);
+#endif
     // for DMNR playback+record thread
     //rb m_sRecBuf;
 
@@ -145,7 +175,6 @@ public:
 private:
 
     status_t setSphVolume(uint32 mode, uint32 gain);
-    status_t OpenModemSpeechControlFlow(int mode);
     status_t openModemDualMicCtlFlow(bool bWB, bool bRecPly);
     status_t closeModemDualMicCtlFlow(bool bRecPly);
 		
@@ -156,8 +185,8 @@ private:
     AudioMTKVolumeInterface *mAudioVolumeInstance;
     AudioAnalogControlInterface *mAudioAnalogInstance;
     AudioDigitalControlInterface *mAudioDigitalInstance;
-    AudioResourceManagerInterface *mAudioResourceManager;
-
+    AudioResourceManagerInterface *mAudioResourceManager; 
+    SpeechPhoneCallController *mSphPhonecallCtrl;
     uint32 mSideTone;
     uint32 mOutputVolume[MODE_NUM];
     uint32 mMode;
@@ -172,8 +201,13 @@ private:
     unsigned short mDualMicTool_micGain;
     unsigned short mDualMicTool_receiverGain;
     unsigned short mDualMicTool_headsetGain;
-    
+    unsigned short mDualMicTool_micGain_default;    
     pthread_t mDMNRThreadID;
+#ifndef DMNR_TUNNING_AT_MODEMSIDE
+    AudioMTKStreamManagerInterface *mAudioMtkStreamManager;
+    AudioSpeechEnhanceInfo * mAudioSpeechEnhanceInfoInstance;
+    int mPlaybackDb_index;
+#endif    
 #endif
 };
 }

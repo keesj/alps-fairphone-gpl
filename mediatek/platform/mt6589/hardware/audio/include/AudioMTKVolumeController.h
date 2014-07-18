@@ -291,6 +291,7 @@ class AudioMTKVolumeController : public AudioMTKVolumeInterface
 
         status_t SetMicGain(uint32_t Mode, uint32_t devices);
         status_t SetSideTone(uint32_t Mode, uint32_t devices);
+        status_t SetMicGainTuning(uint32_t Mode, uint32_t gain);
 
         /**
         * volume controller GetSideToneGain

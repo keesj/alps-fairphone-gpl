@@ -1,3 +1,38 @@
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ */
+/* MediaTek Inc. (C) 2010. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
+
 ///////////////////////////////////////////////////////////////////////////////
 // No Warranty
 // Except as may be otherwise agreed to in writing, no warranties of any
@@ -47,6 +82,32 @@
 
 #include "ParamCALInternal.h"
 
+float **matrix(long nr, long nc);
+void free_matrix(float **m, long nr, long nc);
+float *vector(long n);
+/* Spline Data/Matrix s */
+float	**g_a;			// shading, input array (index starts with 1)
+float	**g_w;			// w, revert shading data
+float	**g_u;			// u, output array (index starts with 1)
+float	**g_zz;			// zz, subsampled input data
+float	**g_zh2;		// horizontal 2nd derivative array
+float	**g_zv2;		// vertical 2nd derivative array	
+float	**g_zhs;		// horizontal spline usage parameter sig
+float	**g_zhp;		// horizontal spline usage parameter 1/p
+float	**g_zhy2;		// horizontal spline usage parameter y"
+float	**g_zvs;		// vertical spline usage parameter sig
+float	**g_zvp;		// vertical spline usage parameter 1/p
+float	**g_zvy2;		// vertical spline usage parameter y"
+float	*g_rindex;		// subsampled row coordinates
+float	*g_cindex;		// subsampled column coodinates
+float	**g_coef[4];	// original 
+#define COEF_FACTOR0	512
+#define COEF_FACTOR1	256
+#define COEF_FACTOR2	128
+#define COEF_RANGE0		10
+#define COEF_RANGE1		12
+#define COEF_RANGE2		13
+
 #define MEDIA_PATH "//data"
 
 void *vector(float *v, long nl, long nh);
@@ -63,6 +124,7 @@ MUINT32 u4LSC_Integer_SQRT(unsigned long long x);
 unsigned short *g_raw;
 LSC_CALI_INFO_T g_lsc_cali_info;
 unsigned int *g_src_tbl;
+float *g_src_tbl_float;
 unsigned int *g_dst_tbl;
 LSC_PARAM_T g_lsc_param;
 LSC_RESULT_T g_lsc_result;
@@ -84,6 +146,168 @@ float truncate (float w, float uv , int min , int fract_len  )
     mul = (mul/pow(2,fract_len)) + min;
     return mul;
 }
+
+
+void spln2h(float cindex[], float **zz, int m, int n, float **zh2)
+// Given an m by n tabulated function zz[1..m][1..n] and tabulated independent
+// variable cindex[1..n], this routine computes one-dimensional natural splines
+// of the rows of zz and returns the 2nd-derivatives in the array y2a.
+{
+	
+
+	void spline(float x[], float y[], int n, float yp1, float ypn, float y2[], float s[], float prec[], float y2o[]);
+	int j;
+
+	for (j=1;j<=m;j++)
+		spline(cindex,zz[j],n,1000.0,1000.0,zh2[j],g_zhs[j],g_zhp[j],g_zhy2[j]);
+}
+
+void spln2v(float rindex[], float **zz, int m, int n, float **zv2)
+// Given an m by n tabulated function zz[1..m][1..n] and tabulated independent
+// variable rindex[1..m], this routine computes one-dimensional natural splines
+// of the columns of zz and returns the 2nd-derivatives in the array zv2.
+{
+	
+	void spline(float x[], float y[], int n, float yp1, float ypn, float y2[], float s[], float prec[], float y2o[]);
+	//void spline(float x[], float y[], int n, float yp1, float ypn, float y2[]);
+	float **yt, **y2v;
+	int i, j;
+
+	yt = matrix(n, m);
+	y2v = matrix(n, m);
+	for(j = 1; j <= m; j++)
+	{
+		for(i = 1; i <= n; i++)
+		{
+			yt[i][j]=zz[j][i];
+		}
+	}
+
+	for (i=1;i<=n;i++)
+		spline(rindex,yt[i],m,1000.0,1000.0,y2v[i],g_zvs[i],g_zvp[i],g_zvy2[i]);
+
+	for(j = 1; j <= m; j++)
+	{
+		for(i = 1; i <= n; i++)
+		{
+			zv2[j][i]=y2v[i][j];
+		}
+	}
+	free_matrix(yt, n, m);
+	free_matrix(y2v, n, m);
+}
+
+void spline(float x[], float y[], int n, float yp1, float ypn, float y2[], float s[], float prec[], float y2o[])
+{
+	int i,k;
+	double p,qn,sig,un;
+	float *u;
+
+	u=vector(n-1);
+	if (yp1 > 999.0)
+		y2[1]=u[1]=0.0;
+	else {
+		y2[1] = -0.5;
+		u[1]=(float) (3.0/(x[2]-x[1]))*((y[2]-y[1])/(x[2]-x[1])-yp1);
+	}
+	for (i=2;i<=n-1;i++) {
+		sig=(x[i]-x[i-1])/(x[i+1]-x[i-1]);
+		p=sig*y2[i-1]+2.0;
+		y2[i]= (float) ((sig-1.0)/p);
+		u[i]=(float) ((y[i+1]-y[i])/(x[i+1]-x[i]) - (y[i]-y[i-1])/(x[i]-x[i-1]));
+		u[i]=(float) ((6.0*u[i]/(x[i+1]-x[i-1])-sig*u[i-1])/p);
+	}
+	if (ypn > 999.0)
+		qn=un=0.0;
+	else {
+		qn=0.5;
+		un=(3.0/(x[n]-x[n-1]))*(ypn-(y[n]-y[n-1])/(x[n]-x[n-1]));
+	}
+	y2[n]= (float) ((un-qn*u[n-1])/(qn*y2[n-1]+1.0));
+	for (k=n-1;k>=1;k--)
+		y2[k]=y2[k]*y2[k+1]+u[k];
+	free(u);
+}
+
+void	rectcoef(float rindex[], float cindex[], float **zz, float **zh2, float **zv2, float **coef, int k, int jj, int ii)
+// For a given rectangle and known spline polynomials along its four sides, it can be shown
+// that the interior point can be interpolated by the following polynomial:
+// f(x,y)=a31*xxxy+a13*xyyy+a30*xxx+a21*xxy+a12*xyy+a03*yyy+a20*xx+a11*xy+a02*yy+a10*x+a01*y+a00
+// There are 12 coeffiecients. Each side of the rectangle has a known polynomial and thus
+// provides four equations. However, four corners of the rectange impose four constraints
+// on the polynomial coefficients. Therefore there are exactly 12 independent equations.
+// The coefficients of f(x,y) can be determined uniquely by this routine.
+// The x-distance and the y-distance are both normalized to [0,1] to simplify the derivation.
+//
+//                  f(x,0)
+//     (0,0) -----------------(1,0)------->x
+//           |                  |
+//           |                  |
+//           |                  |
+//    f(0,y) |      f(x,y)      | f(1,y)
+//           |                  |
+//           |                  |
+//           |                  |
+//     (0,1) |----------------(1,1)
+//           |      f(x,1)
+//           y
+{
+	float	f00, f10, f01, f11, xs, xe, ys, ye, sx, sy, sx2, sy2;
+	float	f00x2, f10x2, f01x2, f11x2, f00y2, f10y2, f01y2, f11y2;
+	double	a31, a13, a30, a21, a12, a03, a20, a11, a02, a10, a01, a00;
+	double	b3, b2, b1, c3, c2;
+
+	// The following coefficients are calculated based on the assumption that
+	// both the x-distance and the y-distance have been normalized to [0,1].
+	// The scale factors, sx and sy, are used to scale the second derivatives.
+		xs = cindex[ii]; xe = cindex[ii+1];
+		ys = rindex[jj]; ye = rindex[jj+1];
+		f00 = zz[jj][ii]; f10 = zz[jj][ii+1];
+		f01 = zz[jj+1][ii]; f11 = zz[jj+1][ii+1];
+		sx = xe - xs; sx2 = sx * sx;
+		sy = ye - ys; sy2 = sy * sy;
+		f00x2 = sx2 * zh2[jj][ii]; f10x2 = sx2 * zh2[jj][ii+1];
+		f01x2 = sx2 * zh2[jj+1][ii]; f11x2 = sx2 * zh2[jj+1][ii+1];
+		f00y2 = sy2 * zv2[jj][ii]; f10y2 = sy2 * zv2[jj][ii+1];
+		f01y2 = sy2 * zv2[jj+1][ii]; f11y2 = sy2 * zv2[jj+1][ii+1];
+
+	// polynomial coeff for f(x,0)=a30*xxx+a20*xx+a10*x+a00
+		a30 = (f10x2 - f00x2) / 6.0;
+		a20 = f00x2 / 2.0;
+		a10 = f10 - f00 - f00x2 / 3.0 - f10x2 / 6.0;
+		a00 = f00;
+
+	// polynomial coef for f(0,y)=a03*yyy+a02*yy+a01*y+a00
+		a03 = (f01y2 - f00y2) / 6.0;
+		a02 = f00y2 / 2.0;
+		a01 = f01 - f00 - f00y2 / 3.0 - f01y2 / 6.0;
+
+	//polynomial coef for f(x,1)=b3*xxx+b2*xx+b1*x+b0
+		b3 = (f11x2 - f01x2) / 6.0;
+		b2 = f01x2 / 2.0;
+		b1 = f11 - f01 - f01x2 / 3.0 - f11x2 / 6.0;
+		//b0 = f01;
+
+	// polynomial coef for f(1,y)=c3*yyy+c2*yy+c1*y+c0
+		c3 = (f11y2 - f10y2) / 6.0;
+		c2 = f10y2 / 2.0;
+		//c1 = f11 - f10 - f10y2 / 3.0 - f11y2 / 6.0;
+		//c0 = f10;
+
+	// other coefficients of f(x,y)
+	// f(x,y)=a31*xxxy+a13*xyyy+a30*xxx+a21*xxy+a12*xyy+a03*yyy+a20*xx+a11*xy+a02*yy+a10*x+a01*y+a00
+
+		a31 = b3 - a30;
+		a13 = c3 - a03;
+		a21 = b2 - a20;
+		a12 = c2 - a02;
+		a11 = b1 - a10 - a13 - a12;
+
+		coef[k][1]=(float)a31; coef[k][2]=(float)a13; coef[k][3]=(float)a30; coef[k][4]=(float)a21;
+		coef[k][5]=(float)a12; coef[k][6]=(float)a03; coef[k][7]=(float)a20; coef[k][8]=(float)a11;
+		coef[k][9]=(float)a02; coef[k][10]=(float)a10; coef[k][11]=(float)a01; coef[k][12]=(float)a00;
+}
+
 
 int truncate_UV (float w, float uv , int min , int fract_len  )
 {
@@ -324,6 +548,17 @@ void *vector(int *v, long nl, long nh)
 }
 
 
+float *vector(long n)
+/* allocate a float vector with subscript range v[nl..nh] */
+{
+		 float *v;
+   
+		 v=(float *)malloc((size_t) ((n+1)*sizeof(float)));
+		 if (!v) printf("allocation failure in vector()\n");
+		 return v;
+}
+
+
 void **matrix(unsigned char **m, long nrl, long nrh, long ncl, long nch)
 /* allocate a float matrix with subscript range m[nrl..nrh][ncl..nch] */
 {
@@ -394,6 +629,33 @@ void **matrix(long **m, long nrl, long nrh, long ncl, long nch)
     /* return pointer to array of pointers to rows */
     return (void**)m;
 }
+
+float **matrix(long nr, long nc)
+/* allocate a float matrix with subscript range m[1..nr][l..nc] */
+{
+		 long i;
+		 float **m;
+   
+		 /* allocate pointers to rows */
+		 m=(float **) malloc((size_t)((nr+1)*sizeof(float*)));
+		 if (!m) printf("allocation failure 1 in matrix()\n");
+   
+		 /* allocate rows and set pointers to them */
+		 m[1]=(float *) malloc((size_t)((nr*nc+1)*sizeof(float)));
+		 if (!m[1]) printf("allocation failure 2 in matrix()\n");
+   
+		 for(i=2;i<=nr;i++) m[i]=m[i-1]+nc;
+   
+		 /* return pointer to array of pointers to rows */
+		 return m;
+}
+void free_matrix(float **m, long nr, long nc)
+/* free a float matrix allocated by matrix() */
+{
+		 free((char*) (m[1]));
+		 free((char*) m);
+}
+
 
 
 void **matrix(float **m, long nrl, long nrh, long ncl, long nch)
@@ -925,6 +1187,33 @@ void vlsc2ndDerivativeGet(DIM_INFO_T d, int y[], float y2[])
     }
 }
 
+
+void vlsc2ndDerivativeGet_float(DIM_INFO_T d, float y[], float y2[])
+{
+    int i,n = d.grid_num;
+    float p,s,v[GRID_MAX];
+
+    v[0]=0.0;
+    for (i=1;i<n-2;i++)	/* i=1~n-3, the same dx */
+    {
+        //v[i]=(float) (v[i-1]*y2[i]-6.0*(float)(y[i+1]-y[i]-y[i]+y[i-1])*y2[i]*d.di2r/8192.0);
+		v[i]=(float) (v[i-1]*y2[i]-6.0*(float)(y[i+1]-y[i]-y[i]+y[i-1])*y2[i]*d.di2r);
+    }
+    {/* i=n-2 */
+        i = n-2;
+        s=(d.di)*(d.ddnr);
+        p=s*y2[i-1]+2.0;
+        //v[i]=(float) (((float)(y[i+1]-y[i])*(d.dnr) - (float)(y[i]-y[i-1])*(d.dir))/8192.0);
+		v[i]=(float) (((float)(y[i+1]-y[i])*(d.dnr) - (float)(y[i]-y[i-1])*(d.dir)));
+        v[i]=(float) ((6.0*v[i]*(d.ddnr)-s*v[i-1])/p);
+    }
+    /* get final 2nd-derivates */
+    for (i=n-2;i>=0;i--)
+    {
+        y2[i]=y2[i]*y2[i+1]+v[i];
+    }
+}
+
 /////////////////////////////////////////////////////////////////////////
 //
 //   vLSC_RECT_COEF_Get () -
@@ -1126,17 +1415,21 @@ void vlscHWTBLCAL(TBL_INFO_T info)
     int coef1, coef2, coef3;
     unsigned int blk_mn, blk_info_0,blk_info_1;
     unsigned int *p_pgn;
+	float *p_pgn_float;
     unsigned int *p_lsc_tbl;
     int nbayer;
 
     //for hardware table
+#ifndef FLOAT_VERSION
     int zz[4][GRID_MAX][GRID_MAX];
     int zzb[GRID_MAX];
     float zh2[GRID_MAX][GRID_MAX];
     float zv2[GRID_MAX][GRID_MAX];
-    float y2[GRID_MAX];
     float yx2[GRID_MAX];
     float yy2[GRID_MAX];
+#endif
+	float y2[GRID_MAX];
+    
     int coef[4][(GRID_MAX-1)*(GRID_MAX-1)][12];
 
     /* parse block info */
@@ -1144,6 +1437,7 @@ void vlscHWTBLCAL(TBL_INFO_T info)
     blk_info_0=info.reg_info0;
     blk_info_1=info.reg_info1;
     p_pgn     =info.src_tbl_addr;
+	p_pgn_float=info.src_tbl_addr_float;
     p_lsc_tbl =info.dst_tbl_addr;
 
     dim_x.grid_num=((blk_mn&0xffff0000)>>16)+2;
@@ -1189,6 +1483,20 @@ void vlscHWTBLCAL(TBL_INFO_T info)
 
 //    ACDK_LOGD("[%s] Get real pixel\n", __FUNCTION__);
     /* parse real pixel gain in GN_BIT */
+
+
+#ifdef FLOAT_VERSION
+	/*for (jj=0;jj<n;jj++)
+    {
+        for (ii=0;ii<m;ii++)
+        {
+            zz[0][jj][ii]=(p_pgn_float[(jj*m+ii)*4+0]);
+            zz[1][jj][ii]=(p_pgn_float[(jj*m+ii)*4+1]);
+            zz[2][jj][ii]=(p_pgn_float[(jj*m+ii)*4+2]);
+            zz[3][jj][ii]=(p_pgn_float[(jj*m+ii)*4+3]);			
+        }
+    }*/
+#else
     for (jj=0;jj<n;jj++)
     {
         for (ii=0;ii<m;ii++)
@@ -1199,10 +1507,216 @@ void vlscHWTBLCAL(TBL_INFO_T info)
             zz[3][jj][ii]=(p_pgn[(jj*m+ii)*2+1]&0xFFFF0000)>>16;
         }
     }
+#endif
+#ifdef FLOAT_VERSION
+	
+	int j;
+	//g_zz = (float **)matrix(g_zz, 1, n, 1, m);	
+	//g_zh2 = (float **)matrix(g_zh2, 1, n, 1, m);	
+	//g_zv2 = (float **)matrix(g_zv2, 1, n, 1, m);	
+	//g_rindex = (float *)vector(g_rindex,1,n); /* row index positions, starts with 1*/
+	//g_cindex = (float *)vector(g_cindex,1,m);
+
+
+//MainEthan
+    int count;
+	g_coef[0] = matrix((m-1)*(n-1), 12);
+	g_coef[1] = matrix((m-1)*(n-1), 12);
+	g_coef[2] = matrix((m-1)*(n-1), 12);
+	g_coef[3] = matrix((m-1)*(n-1), 12);
+
+	g_zhs = matrix(n, m);
+	g_zhp = matrix(n, m);
+	g_zhy2 = matrix(n, m);
+	g_zvs = matrix(m, n);
+	g_zvp = matrix(m, n);
+	g_zvy2 = matrix(m, n);
+
+	g_zz = matrix(n, m); /* subsampled array value, index starts with 1 */
+	g_zh2 = matrix(n, m); /* horizontal 2nd derivative array, index starts with 1 */
+	g_zv2 = matrix(n, m); /* vertical 2nd derivative array, index starts with 1 */
+
+	g_rindex = vector(n); /* row index positions, starts with 1*/
+	g_cindex = vector(m); /* column index positions, starts with 1 */
+
+
+	int block_width,block_height,k;
+
+
+    
+	/* 1. get grid xy coordinates g_cindex & g_rindex */
+#if 0
+	for(i=0;i<m;i++)
+	{
+		g_cindex[1+i]=g_col_idx[i]+1;		
+	}
+	for(j=0;j<n;j++)
+	{
+		g_rindex[1+j]=g_row_idx[j]+1;
+	}
+#else
+		g_cindex[1] = 1;
+		g_cindex[m] = (float)(g_lsc_param.raw_wd>>1);
+		block_width = g_lsc_param.block_wd;
+		for(i = 2; i < m; i++)
+		{
+			g_cindex[i] = (float) block_width*(i-1)+1;
+		}
+
+		g_rindex[1] = 1;
+		g_rindex[n] = (float)(g_lsc_param.raw_ht>>1);
+		block_height = g_lsc_param.block_ht;
+		for(j = 2; j < n; j++)
+		{
+			g_rindex[j] = (float) block_height*(j-1)+1;
+		}
+#endif
 
 
     for(nbayer=0;nbayer<4;nbayer++) // for each channel
     {
+#if 0
+			FILE *fp;
+			if(nbayer==0)
+				fp=fopen("g_zz_0.txt","wt");
+			else if(nbayer==1)
+				fp=fopen("g_zz_1.txt","wt");
+			else if(nbayer==2)
+				fp=fopen("g_zz_2.txt","wt");
+			else if(nbayer==3)
+				fp=fopen("g_zz_3.txt","wt");
+#endif
+			for (jj=0;jj<n;jj++)
+			{
+				for (ii=0;ii<m;ii++)
+				{
+				    g_zz[jj+1][ii+1]=(p_pgn_float[(jj*m+ii)*4+nbayer]);
+#if 0
+					fprintf(fp,"%2.20f ",g_zz[jj+1][ii+1]);
+#endif
+				}
+			}
+#if 0
+			fclose(fp);
+#endif
+
+		/* 4. cal spline coef */
+		// compute the horizontal and vertical 2nd derivative array, zh2 and zv2.
+		spln2h(g_cindex, g_zz, n, m, g_zh2);
+		spln2v(g_rindex, g_zz, n, m, g_zv2);
+
+		for(jj = 1; jj < n; jj++)
+		{
+			for(ii = 1; ii < m; ii++)
+			{
+				k = (jj - 1) * (m - 1) + ii;
+				rectcoef(	g_rindex, g_cindex, g_zz,
+							g_zh2, g_zv2, g_coef[nbayer], k, jj, ii);
+			}
+		}
+
+		/* 5. padding to HW table */
+		/*
+	#define COEF_FACTOR0	512
+	#define COEF_FACTOR1	256
+	#define COEF_FACTOR2	128
+	#define COEF_RANGE0		10
+	#define COEF_RANGE1		12
+	#define COEF_RANGE2		13
+		*/
+#if 1    // rounding by magnitude, 
+		for(j = 1; j <= k; j++)
+		{
+			for(i = 1; i <= 12; i++)
+			{
+				if(i<COEF_RANGE0)
+				{					
+					if(g_coef[nbayer][j][i]>=0)
+						count = (int)(g_coef[nbayer][j][i]*COEF_FACTOR0 +0.5);
+					else
+						count = (int)(g_coef[nbayer][j][i]*COEF_FACTOR0 -0.5);
+
+				}else if(i<COEF_RANGE1)
+					if(g_coef[nbayer][j][i]>=0)
+						count = (int)(g_coef[nbayer][j][i]*COEF_FACTOR1 +0.5);
+					else
+						count = (int)(g_coef[nbayer][j][i]*COEF_FACTOR1 -0.5);
+				else
+				{
+					if(g_coef[nbayer][j][i]>=0)
+						count = (int)(g_coef[nbayer][j][i]*COEF_FACTOR2 +0.5);
+					else
+						count = (int)(g_coef[nbayer][j][i]*COEF_FACTOR2 -0.5);
+				}
+      	 	    g_coef[nbayer][j][i] = (float)count;
+			}
+		}
+#else
+		for(j = 1; j <= k; j++)
+		{
+			for(i = 1; i <= 12; i++)
+			{
+				if(i<COEF_RANGE0)
+					count = (int)(g_coef[nbayer][j][i]*COEF_FACTOR0);
+				else if(i<COEF_RANGE1)
+					count = (int)(g_coef[nbayer][j][i]*COEF_FACTOR1);
+				else
+					count = (int)(g_coef[nbayer][j][i]*COEF_FACTOR2);
+      	 	    g_coef[nbayer][j][i] = (float)count;
+			}
+		}
+
+#endif
+	
+
+
+
+
+	}
+
+
+
+		for(jj = 0; jj < n-1; jj++) 
+		{
+			for(ii = 0; ii < m-1; ii++)
+			{
+				for(nbayer=0;nbayer<4;nbayer++)
+				{
+					for( kk=0; kk<12; kk+=1)
+					{
+						int idx= (jj) * (m - 1) + ii + 1;
+						coef[nbayer][jj*(m-1)+ii][kk  ]=g_coef[nbayer][idx][kk+1];
+					}
+				}
+			}
+		}		
+
+	free_matrix(g_zhs,n, m);
+	free_matrix(g_zhp,n, m);// = matrix(n, m);
+	free_matrix(g_zhy2,n, m);// = matrix(n, m);
+	free_matrix(g_zvs,m, n);// = matrix(m, n);
+	free_matrix(g_zvp,m, n);// = matrix(m, n);
+	free_matrix(g_zvy2,m, n);// = matrix(m, n);
+
+	free_matrix(g_zz,n, m); 
+	free_matrix(g_zh2,n, m);
+	free_matrix(g_zv2,n, m);
+
+	free(g_rindex);// = vector(n);
+	free(g_cindex);//; = vector(m); 
+
+
+
+	
+
+#else
+
+    for(nbayer=0;nbayer<4;nbayer++) // for each channel
+    {
+
+
+
+
 //        ACDK_LOGD("[%s] Each channel %d\n", __FUNCTION__, nbayer);
         /* get final 2nd derivatives in x-dir */
         for (jj=0;jj<n;jj++)
@@ -1211,7 +1725,11 @@ void vlscHWTBLCAL(TBL_INFO_T info)
                 yx2[ii]=y2[ii];
             }
             yx2[ii]=0.0;
+#ifdef FLOAT_VERSION
+			vlsc2ndDerivativeGet_float(dim_x,zz[nbayer][jj],yx2);
+#else
             vlsc2ndDerivativeGet(dim_x,zz[nbayer][jj],yx2);
+#endif
             for (ii=0;ii<m;ii++)
             {
                 zh2[jj][ii]=yx2[ii];
@@ -1230,8 +1748,11 @@ void vlscHWTBLCAL(TBL_INFO_T info)
                 yy2[jj]=y2[jj];
             }
             yy2[jj]=0.0;
-
+#ifdef FLOAT_VERSION
+			vlsc2ndDerivativeGet_float(dim_y,zzb,yy2);
+#else
             vlsc2ndDerivativeGet(dim_y,zzb,yy2);
+#endif
             for (jj=0;jj<n;jj++)
             {
                 zv2[jj][ii]=yy2[jj];
@@ -1261,6 +1782,8 @@ void vlscHWTBLCAL(TBL_INFO_T info)
             }
         }
     }
+#endif
+    
 
 
 //    ACDK_LOGD("[%s] Output //data//hwtbl.bin\n", __FUNCTION__);
@@ -1352,6 +1875,31 @@ MINT32 mrLSC_POLY_Ratio_Get(int d, int dmax, RATIO_POLY_T coef_t)
     return ((int)(ri*(float)(1<<RATIO_POLY_BIT)));
 }
 
+
+
+float mrLSC_POLY_RatioFloat_Get(int d, int dmax, RATIO_POLY_T coef_t)
+{
+    float di,dni,ri;
+    float coefpoly[6];
+    int k;
+    coefpoly[0]=coef_t.coef_f;
+    coefpoly[1]=coef_t.coef_e;
+    coefpoly[2]=coef_t.coef_d;
+    coefpoly[3]=coef_t.coef_c;
+    coefpoly[4]=coef_t.coef_b;
+    coefpoly[5]=coef_t.coef_a;
+
+    di=(float)d/(float)dmax;
+    dni=di;
+    ri=coefpoly[0];
+    for(k=1 ; k<6 ; k++)
+    {
+        ri+=(coefpoly[k]*dni);
+        dni*=di;
+    }
+    return ri;//((int)(ri*(float)(1<<RATIO_POLY_BIT)));
+}
+
 /////////////////////////////////////////////////////////////////////////
 //
 //   vLSC_PARAM_INIT () -
@@ -1392,9 +1940,11 @@ void vLSC_PARAM_INIT(LSC_CAL_INI_PARAM_T a_rLSCCaliINIParam)
     g_lsc_param.block_wd_last=g_lsc_param.plane_wd-(g_lsc_param.block_wd)*(g_lsc_param.x_grid_num-2);
     g_lsc_param.block_ht_last=g_lsc_param.plane_ht-(g_lsc_param.block_ht)*(g_lsc_param.y_grid_num-2);
     /* get right shift bit as the divider of block avg */
+#ifndef FLOAT_VERSION
     i=0;u=g_lsc_param.avg_pixel_size;
     do{u>>=1;i++;}while(u>1);
     g_lsc_param.avg_pixel_size_bit=i;
+#endif
     /* condition check */
     //if(g_lsc_param.raw_wd-(g_lsc_param.raw_wd&0xfffffffc)) // raw width must multiple of 4 pixel
     //	ACDK_LOGE(" ERROR :: LSC calibraton raw width illegal, raw width must multiple of 4 pixel \n");
@@ -1425,7 +1975,9 @@ void vLSC_Calibration_INIT(MUINT8* a_u1BufferAddr)
     g_raw = (unsigned short *)a_u1BufferAddr;
     //lsc_raw8_load(RAW_IN_NAME, g_raw, RAW_X_DIM*RAW_Y_DIM/4);
     g_src_tbl = (unsigned int *)malloc(m*n*2*sizeof(unsigned int));
+	g_src_tbl_float= (float *)malloc(m*n*4*sizeof(float));
     g_dst_tbl = (unsigned int *)malloc((m-1)*(n-1)*16*sizeof(unsigned int));
+	
     /* init max position & value search */
     memset( &g_lsc_result, 0, sizeof(LSC_RESULT_T) );
     /* init grid x coordinates */
@@ -1446,9 +1998,16 @@ void vLSC_Calibration_INIT(MUINT8* a_u1BufferAddr)
     g_lsc_cali_info.tbl_info.reg_info0=((blk_wd<<16)&0xffff0000) | ((blk_ht)&0x0000ffff);
     g_lsc_cali_info.tbl_info.reg_info1=((blk_wd_last<<16)&0xffff0000)|(blk_ht_last&0x0000ffff);
     g_lsc_cali_info.tbl_info.src_tbl_addr=g_src_tbl;
+	g_lsc_cali_info.tbl_info.src_tbl_addr_float=g_src_tbl_float;
     g_lsc_cali_info.tbl_info.dst_tbl_addr=g_dst_tbl;
 }
 
+void vLSC_Calibration_END(void)
+{
+    free(g_src_tbl);
+    free(g_src_tbl_float);
+    free(g_dst_tbl);
+}
 
 MINT32 ModifyBayerOrder(MUINT32 *coeff_table, MUINT32 length, int old_order, int new_order)
 {
@@ -1494,6 +2053,7 @@ MINT32 ModifyBayerOrder(MUINT32 *coeff_table, MUINT32 length, int old_order, int
        memcpy(&coeff_table[coeff_idx+idx3], coeff_temp[3], sizeof(coeff_temp[0]));
      }
 
+     ACDK_LOGD("ModifyBayerOrder Done !\n");
     return MTRUE;
 }
 /////////////////////////////////////////////////////////////////////////
@@ -1507,16 +2067,36 @@ MINT32 mrLSC_Calibrate(LSC_CALI_INFO_T cali_info, MUINT8 a_u1Mode, MUINT16 a_u2S
     int kx,ky,x0,y0,xn,yn;
     int idx0,idx1;
     unsigned int vlong0,vlong1;
-    int val[4];
+#ifdef READ_GAIN_TABLE    
+	float gaintable[]={
+//#include "float-gain_table.txt"
+		#include "3h7-avg33-float-gain_table.txt"
+	};
+#endif
+
+
+
+#ifdef FLOAT_VERSION
+	float val[4];
+	float ratio_poly_float=1.0;
+	float pixnum_avg=g_lsc_param.avg_pixel_size*g_lsc_param.avg_pixel_size;
+#else
+	unsigned int val[4];
+	int ratio_poly; // compensation ratio to original from polynominal calculation
+
+#endif
     int bayer_order=g_lsc_param.bayer_order; // first pixel in which plane
     int m=g_lsc_param.x_grid_num; // x-dir grid number
     int n=g_lsc_param.y_grid_num; // y-dir grid number
     int avg_pxl=g_lsc_param.avg_pixel_size; // avg_pxl*avg_pxl pixels sqare region for pixel value average, avoid noise
     unsigned long long wd=g_lsc_param.plane_wd; // raw domain width
     unsigned long long ht=g_lsc_param.plane_ht; // raw domain height
+#ifndef FLOAT_VERSION
     int sb=(g_lsc_param.avg_pixel_size_bit)*2; // shift bit after accumulation of pixel values in avg_pxl*avg_pxl square region
+#endif
     int pxl_gain_max; // max pixel gain in fix point
-    int ratio_poly; // compensation ratio to original from polynominal calculation
+    
+	
     int ratio_poly_enable=g_lsc_param.poly_coef.ratio_poly_flag; // en/disable of compensation ratio
     int dis_max; // for compensation ratio usage, the max distance to center point of raw
     int dis_cur; // for compensation ratio usage, distance to center from current grid point
@@ -1526,7 +2106,8 @@ MINT32 mrLSC_Calibrate(LSC_CALI_INFO_T cali_info, MUINT8 a_u1Mode, MUINT16 a_u2S
     unsigned short *raw_addr=cali_info.raw_img_addr; // raw data address
     TBL_INFO_T tbl_cal_info=cali_info.tbl_info; // parameters for table calculation
     unsigned int *src_addr=tbl_cal_info.src_tbl_addr; // source pixel gain table address
-
+	float *src_addr_float=tbl_cal_info.src_tbl_addr_float; // source pixel gain table address
+	int fidx;
     MINT32 mrRet = S_ACDK_CALIBRATION_OK;
     ACDK_LOGD("[%s] m,n (%d,%d), plane wd,ht (%d, %d) raw wd,ht (%d, %d)\n", __FUNCTION__,
             m, n,
@@ -1591,7 +2172,26 @@ MINT32 mrLSC_Calibrate(LSC_CALI_INFO_T cali_info, MUINT8 a_u1Mode, MUINT16 a_u2S
             /* search max value between grid point average values */
             for(k=0;k<4;k++)
             {
-                val[k] >>= sb;
+#if 0 //Ethan
+				if (sb>=6)
+					val[k] = (val[k] + (1<<((sb-7))) ) >>(sb-6);
+				else
+					val[k] = (val[k] + (1<<((sb-1))) ) >>(sb);
+#else
+#ifdef FLOAT_VERSION
+				val[k]=val[k]/(float)pixnum_avg;  ///(float)(1<<sb);
+#else
+                val[k] >>= sb; ///should rouding
+#endif
+#endif
+
+#ifdef READ_GAIN_TABLE
+			
+				val[k]=gaintable[ (j*m+i)*4+k];
+#endif
+
+
+
                 if(val[k]>g_lsc_result.max_val[k])
                 {
                     g_lsc_result.max_val[k]=val[k];
@@ -1600,24 +2200,43 @@ MINT32 mrLSC_Calibrate(LSC_CALI_INFO_T cali_info, MUINT8 a_u1Mode, MUINT16 a_u2S
                 }
             }
             /* save to pixel gain table temporalily as working buffer */
+#ifdef FLOAT_VERSION
+			idx0=(j*m+i)*4;
+            *(src_addr_float+(idx0  ))=val[0];
+			*(src_addr_float+(idx0+1  ))=val[1];
+			*(src_addr_float+(idx0+2  ))=val[2];
+			*(src_addr_float+(idx0+3  ))=val[3];
+			
+#else
             idx0=(j*m+i)*2;
             *(src_addr+(idx0  ))=((val[1]<<16)&0xffff0000)|((val[0])&0x0000ffff);
             *(src_addr+(idx0+1))=((val[3]<<16)&0xffff0000)|((val[2])&0x0000ffff);
+#endif
         }
     }
+
+
+#ifdef SEARCH_MAX_AGAIN 
 
     /* prepare start & end index for max value search near raw center point */
     if(((m+1)>>1)==(m>>1)) kx=(m>>1); // x grid number even -> search from idx[(m/2-1)]~idx[(m/2)]
     else kx=(m>>1)+1; // x grid number odd -> search from idx[m/2-1)]~idx[(m/2+1)]
     if(((n+1)>>1)==(n>>1)) ky=(n>>1);
     else ky=(n>>1)+1;
+#if 0 //Ethan
+	x0=g_col_idx[m/2-2];
+    xn=g_col_idx[kx+1];
+    y0=g_row_idx[n/2-2];
+    yn=g_row_idx[ky+1];
+#else
     x0=g_col_idx[m/2-1];
     xn=g_col_idx[kx];
     y0=g_row_idx[n/2-1];
     yn=g_row_idx[ky];
+#endif
     if((x0>>1)!=((x0+1)>>1)) x0+=1;
     /* start max value search @ centre near region */
-    for(j=y0;j<=yn;j+=avg_pxl)
+    for(j=y0;j<=yn;j+=avg_pxl)  /// ????
     {
         for(i=x0;i<=xn;i+=avg_pxl)
         {
@@ -1654,7 +2273,11 @@ MINT32 mrLSC_Calibrate(LSC_CALI_INFO_T cali_info, MUINT8 a_u1Mode, MUINT16 a_u2S
             /* search max value near center points */
             for(k=0;k<4;k++)
             {
+#ifdef FLOAT_VERSION
+				val[k] =val[k]/(float)(1<<sb);
+#else
                 val[k] >>= sb;
+#endif
                 if(val[k]>g_lsc_result.max_val[k])
                 {
                     g_lsc_result.max_val[k]=val[k];
@@ -1664,19 +2287,30 @@ MINT32 mrLSC_Calibrate(LSC_CALI_INFO_T cali_info, MUINT8 a_u1Mode, MUINT16 a_u2S
             }
         }
     }
+#endif
+
+
 
     pxl_gain_max=MIN2(((1<<16)-1),(g_lsc_param.pxl_gain_max)<<GN_BIT); /* pixel gain upper bound is min of user defined or 16 bit */
+#ifndef FLOAT_VERSION
     ratio_poly=(1<<RATIO_POLY_BIT); /* default ratio of compensation ratio (1.0), but in fix point to RATIO_POLY_BIT bit */
+#endif
     dis_max=u4LSC_Integer_SQRT((unsigned long long)((((long long)wd*(long long)wd)>>2)+(((long long)ht*(long long)ht)>>2))<<SQRT_NORMALIZE_BIT); // max distance to raw center: from (0,0) to (wd/2,ht/2), for sqrt calculation, right shift SQRT_NORMALIZE_BIT bit for accuracy
-
+#ifndef FLOAT_VERSION
     ACDK_LOGD("[%s] gain_max, ratio dis_max %d, %d, %d", __FUNCTION__,
             pxl_gain_max, ratio_poly, dis_max);
+#endif
 #if LSC_Debug_Table_Output
     char fileName[100];
     sprintf(fileName, "%s//%04d_%04d.Table.dat", MEDIA_PATH, g_lsc_param.raw_wd, g_lsc_param.raw_ht);
 
     FILE *fin;
     fin  = fopen(fileName, "wt");
+
+// debug
+    sprintf(fileName, "%s//poly.dat", MEDIA_PATH);
+    FILE *finpoly;
+    finpoly  = fopen(fileName, "wt");
 #endif
     for(j = 0; j < n; j++)
     {
@@ -1688,26 +2322,62 @@ MINT32 mrLSC_Calibrate(LSC_CALI_INFO_T cali_info, MUINT8 a_u1Mode, MUINT16 a_u2S
                 kx=g_col_idx[i];ky=g_row_idx[j];
                 x0=(wd>>1);y0=(ht>>1);
                 dis_cur=u4LSC_Integer_SQRT((unsigned long long)((long long)(kx-x0)*(long long)(kx-x0)+(long long)(ky-y0)*(long long)(ky-y0))<<SQRT_NORMALIZE_BIT);
+#ifdef FLOAT_VERSION
+				ratio_poly_float=mrLSC_POLY_RatioFloat_Get(dis_cur, dis_max, g_lsc_param.poly_coef);
+				fprintf(finpoly, "[%3d, %3d]= %8f (%8d, %8d)\n",i, j, ratio_poly_float, dis_cur, dis_max);
+#else
                 ratio_poly=mrLSC_POLY_Ratio_Get(dis_cur, dis_max, g_lsc_param.poly_coef);
+				fprintf(finpoly, "[%3d, %3d]= %8d (%8d, %8d)\n",i, j, ratio_poly, dis_cur, dis_max);
+#endif
+				
             }
             /* parse original grid average pixel values from buffer */
+#ifdef FLOAT_VERSION
+			idx0=(j*m+i)*4;
+            val[0]=*(src_addr_float+idx0  )  ;
+            val[1]=*(src_addr_float+idx0+1 );
+            val[2]=*(src_addr_float+idx0+2);
+            val[3]=*(src_addr_float+idx0+3);
+#else
             idx0=(j*m+i)*2;
             val[0]=(*(src_addr+(idx0  ))    )&0x0000ffff;
             val[1]=(*(src_addr+(idx0  ))>>16)&0x0000ffff;
             val[2]=(*(src_addr+(idx0+1))    )&0x0000ffff;
             val[3]=(*(src_addr+(idx0+1))>>16)&0x0000ffff;
+#endif
             /* calculate pixel gain of each grid point, right shift GN_BIT bit to fix point */
             for(k=0;k<4;k++)
             {
-                if(val[k]==0) val[k]=pxl_gain_max;
-                else val[k]=((g_lsc_result.max_val[k]*ratio_poly)<<(GN_BIT-RATIO_POLY_BIT))/val[k];
-                if(val[k]>pxl_gain_max) val[k]=pxl_gain_max;
+                if(val[k]==0) 
+					val[k]=pxl_gain_max;
+                else 
+				{
+#ifdef FLOAT_VERSION
+					val[k]=((g_lsc_result.max_val[k])*ratio_poly_float )/val[k];//((g_lsc_result.max_val[k])*ratio_poly)/val[k];
+#else
+					val[k]=((g_lsc_result.max_val[k]*ratio_poly)<<(GN_BIT-RATIO_POLY_BIT))/val[k];
+#endif
+				}
+                if(val[k]>pxl_gain_max) 
+					val[k]=pxl_gain_max;
             }
+#ifdef FLOAT_VERSION
+			fidx=(j*m+i)*4;
+			*(src_addr_float+(fidx  ))=val[0];
+			*(src_addr_float+(fidx+1  ))=val[1];
+			*(src_addr_float+(fidx+2  ))=val[2];
+			*(src_addr_float+(fidx+3  ))=val[3];
 
+#else
             *(src_addr+(idx0  ))=((val[1]<<16)&0xffff0000)|((val[0])&0x0000ffff);
             *(src_addr+(idx0+1))=((val[3]<<16)&0xffff0000)|((val[2])&0x0000ffff);
+#endif
 #if LSC_Debug_Table_Output
+#ifdef FLOAT_VERSION
+            fprintf(fin, "%f, %f, %f, %f",val[0], val[1], val[2], val[3]);
+#else
             fprintf(fin, "%5d, %5d, %5d, %5d",val[0], val[1], val[2], val[3]);
+#endif
             fprintf(fin, "\n");
             //fprintf(fin, "0x%x ,",*(src_addr + idx0));
             //fprintf(fin, "0x%x ,",*(src_addr + idx0 +1));
@@ -1718,6 +2388,8 @@ MINT32 mrLSC_Calibrate(LSC_CALI_INFO_T cali_info, MUINT8 a_u1Mode, MUINT16 a_u2S
 #if LSC_Debug_Table_Output
     fflush(fin);
     fclose(fin);
+    fflush(finpoly);
+    fclose(finpoly);
 
     char fileNameCoef[100];
     sprintf(fileNameCoef, "%s//%04d_%04d.Coeff.c", MEDIA_PATH, g_lsc_param.raw_wd, g_lsc_param.raw_ht);
@@ -1742,13 +2414,16 @@ MINT32 mrLSC_Calibrate(LSC_CALI_INFO_T cali_info, MUINT8 a_u1Mode, MUINT16 a_u2S
     sync();
 
     //Convert to SVD matrix
-    svd_tool(src_addr, n, m, (int)a_u2SVDTermNum, 8, tbl_cal_info,a_u1Mode);
+    //svd_tool(src_addr, n, m, (int)a_u2SVDTermNum, 8, tbl_cal_info,a_u1Mode);
 
     /* calculate HW table */
     //vlscHWTBLCAL(tbl_cal_info);
 
+#if 0 // sammy
     free(g_src_tbl);
+    free(g_src_tbl_float);
     free(g_dst_tbl);
+#endif
     return mrRet;
 }
 

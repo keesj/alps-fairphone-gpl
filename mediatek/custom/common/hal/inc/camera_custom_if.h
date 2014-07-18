@@ -153,6 +153,13 @@ customExif_t const& getCustomExif();
 
 MUINT32 custom_GetFlashlightGain10X(void);  //cotta : added for high current solution
 MUINT32 custom_BurstFlashlightGain10X(void);
+double custom_GetYuvFlashlightThreshold(void);
+MINT32 custom_GetYuvFlashlightFrameCnt(void);
+MINT32 custom_GetYuvFlashlightDuty(void);
+MINT32 custom_GetYuvFlashlightStep(void);
+MINT32 custom_GetYuvFlashlightHighCurrentDuty(void);
+MINT32 custom_GetYuvFlashlightHighCurrentTimeout(void);
+
 
 /*******************************************************************************
 * Get the LCM Physical Orientation, the LCM physical orientation 

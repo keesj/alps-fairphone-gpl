@@ -9,6 +9,7 @@
 #include "AudioAnalogControlFactory.h"
 #include "AudioDigitalType.h"
 #include "AudioSpeechEnhanceInfo.h"
+#include "AudioSpeechEnhLayer.h"
 
 #include <unistd.h>
 
@@ -142,6 +143,9 @@ public:
     status_t TurnOffAfeDigital(uint32 AfeDigital, bool keepDacOpen);
     ssize_t WriteDataToBTSCOHW(const void *buffer, size_t bytes);
     ssize_t DoBTSCOSRC(const void *buffer, size_t bytes, void **outbuffer);
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+	ssize_t DoVoIPSRC(const void *buffer, size_t bytes, void **outbuffer); 
+#endif
 
     int GetSampleRate(void);
     int GetChannel(void);
@@ -164,6 +168,11 @@ public:
     bool GetFSyncFlag();
     static void FsyncCallback(int signal);
     static bool FysncFlag;
+	
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT	
+	timespec GetSystemTime(bool print = 0);
+	void setCPU_MIN_Freq(const char *pfreq, const char *pGenable, bool bhigh);
+#endif	
 
 private:
     size_t WriteDataToAudioHW(const void *buffer, size_t bytes);
@@ -202,6 +211,9 @@ private:
     uint32_t mSourceSampleRate;
     uint32_t mSourceChannels;
     bool mSteroToMono;
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT	
+	bool mCPUAdjustEnable;
+#endif
 
     int DumpFileNum;
     String8 DumpFileName;
@@ -221,6 +233,12 @@ private:
     struct echo_reference_itfe *mEcho_reference;
     int mHwBufferSize;
     bool mForceStandby;
+
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+    Mutex	mSPEVoIPLock;
+    BliSrc * mBliSrcVoIP;
+    uint8_t *mSwapBufferVoIP;
+#endif
 
     struct sigaction action;
     void setFsync();

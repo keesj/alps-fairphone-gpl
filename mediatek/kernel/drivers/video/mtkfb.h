@@ -199,6 +199,7 @@ struct fb_overlay_layer {
     int next_buff_idx;
     int identity;
     int connected_type;
+    unsigned int security;
 };
 
 struct fb_overlay_buffer_info{

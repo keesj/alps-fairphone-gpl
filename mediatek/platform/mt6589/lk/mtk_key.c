@@ -98,9 +98,9 @@ BOOL mtk_detect_key(unsigned short key)	/* key: HW keycode */
 		if (1 == pmic_detect_homekey())
 		{
 			printf("mtk detect key function pmic_detect_homekey pressed\n");
-			return TRUE;
+			return FALSE;  //return TRUE;
 		}
-		return FALSE; 
+		return TRUE;  //return FALSE; 
 	}
 #endif
 

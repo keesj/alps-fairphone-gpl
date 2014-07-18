@@ -30,7 +30,7 @@ const NVRAM_LENS_PARA_STRUCT FM50AF_LENS_PARA_DEFAULT_VALUE =
     	}
 	    }},
 
-        {250},          //i4ZoomTable[0]
+        {20},          //i4ZoomTable[0]
         30,             // i4AF_THRES_MAIN
         20,             // i4AF_THRES_SUB
         50000,          // i4AF_THRES_OFFSET

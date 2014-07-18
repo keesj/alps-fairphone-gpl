@@ -1,3 +1,38 @@
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ */
+/* MediaTek Inc. (C) 2010. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
+
 ///////////////////////////////////////////////////////////////////////////////
 // No Warranty
 // Except as may be otherwise agreed to in writing, no warranties of any
@@ -481,7 +516,7 @@ MVOID AcdkMhalEng::acdkMhalCBHandle(MUINT32 a_type, MUINT32 a_addr1, MUINT32 a_a
 * acdkMhal3ASetParm
 * brif : set 3A parameter
 *******************************************************************************/
-MINT32 AcdkMhalEng::acdkMhal3ASetParam(MINT32 devID)
+MINT32 AcdkMhalEng::acdkMhal3ASetParam(MINT32 devID, MUINT8 IsFactory)
 {
     ACDK_LOGD("devID(%d)",devID);
 
@@ -509,19 +544,17 @@ MINT32 AcdkMhalEng::acdkMhal3ASetParam(MINT32 devID)
 
     //3A parameter setting
     cam3aParam.u4CamMode = eAppMode_PhotoMode;
-    cam3aParam.u4AfMode = 1;
+    //AF mode sync ( 1.factory set to continue mode  2.Meda mode set to single) 
+    if(IsFactory)
+        cam3aParam.u4AfMode = 1; 
+    else
+        cam3aParam.u4AfMode = 0;
     //Tuning parameter setting
     cam3aParam.u4BrightnessMode = 1;
     cam3aParam.u4HueMode        = 1;
     cam3aParam.u4SaturationMode = 1;
     cam3aParam.u4EdgeMode       = 1;
     cam3aParam.u4ContrastMode   = 1;
-#if defined(MTK_FACTORY_AUTO_FLASH_SUPPORT)
-	XLOGD("line=%d factory flash=auto (support)",__LINE__);
-	cam3aParam.u4StrobeMode = 0;
-#else
-	XLOGD("line=%d MTK_FACTORY_AUTO_FLASH_SUPPORT not support",__LINE__);
-#endif
 
     //set zoom info
     m_p3AHal->setZoom(100, 0, 0, mAcdkMhalPrvParam.sensorWidth, mAcdkMhalPrvParam.sensorHeight);
@@ -563,7 +596,7 @@ MINT32 AcdkMhalEng::acdkMhalPreviewStart(MVOID *a_pBuffIn)
 
     //====== Set 3A Parameter ======
 
-    acdkMhal3ASetParam((MINT32)mAcdkMhalPrvParam.sensorID);
+    acdkMhal3ASetParam((MINT32)mAcdkMhalPrvParam.sensorID,(MUINT8)mAcdkMhalPrvParam.IsFactoryMode);
 
     //====== Member Variable ======
 
@@ -1048,7 +1081,7 @@ MINT32 AcdkMhalEng::acdkMhalCaptureStart(MVOID *a_pBuffIn)
 MINT32 AcdkMhalEng::acdkMhalCaptureStop()
 {
     ACDK_LOGD("+");
-
+    
 #if 0
     //====== Local Variable Declaration ======
 
@@ -1094,7 +1127,6 @@ MINT32 AcdkMhalEng::acdkMhalCaptureStop()
 #else
     mReadyForCap = MFALSE;
     mFocusDone = MFALSE;
-
     ACDK_LOGD("-");
     return ACDK_RETURN_NO_ERROR;
 #endif
@@ -1658,9 +1690,34 @@ MINT32 AcdkMhalEng::acdkMhalCaptureProc()
 }
 
 /*******************************************************************************
+* 
+*******************************************************************************/
+MUINT32 AcdkMhalEng::acdkMhalGetShutTime()
+{
+    m_p3AHal->getCaptureParams(0, 0, mCap3AParam);
+
+    ACDK_LOGD("mCap3AParam.u4Eposuretime(%u)",mCap3AParam.u4Eposuretime);
+
+    return mCap3AParam.u4Eposuretime;
+    
+}
 
 /*******************************************************************************
-*
+* 
+*******************************************************************************/
+MVOID AcdkMhalEng::acdkMhalSetShutTime(MUINT32 a_time)
+{
+    // get and then set
+    m_p3AHal->getCaptureParams(0, 0, mCap3AParam);
+
+    ACDK_LOGD("ori(%u),new(%u)",mCap3AParam.u4Eposuretime,a_time);
+    
+    mCap3AParam.u4Eposuretime = a_time;
+    m_p3AHal->updateCaptureParams(mCap3AParam);
+}
+
+/*******************************************************************************
+* 
 *******************************************************************************/
 MUINT32 AcdkMhalEng::acdkMhalGetAFInfo()
 {
@@ -1670,7 +1727,7 @@ MUINT32 AcdkMhalEng::acdkMhalGetAFInfo()
     u32AFInfo = g_pAcdkMHalEngObj->mFocusSucceed;
 
     return u32AFInfo;
-
+    
 }
 
 /*******************************************************************************
@@ -1697,7 +1754,7 @@ void AcdkMhalEng::doNotifyCb(int32_t _msgType,
         }
 
         g_pAcdkMHalEngObj->mFocusDone = MTRUE;
-
+        
     }
 
     ACDK_LOGD("-");

@@ -1,3 +1,28 @@
+/********************************************************************************************
+ *     LEGAL DISCLAIMER
+ *
+ *     (Header of MediaTek Software/Firmware Release or Documentation)
+ *
+ *     BY OPENING OR USING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ *     THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE") RECEIVED
+ *     FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON AN "AS-IS" BASIS
+ *     ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES, EXPRESS OR IMPLIED,
+ *     INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+ *     A PARTICULAR PURPOSE OR NONINFRINGEMENT. NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY
+ *     WHATSOEVER WITH RESPECT TO THE SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY,
+ *     INCORPORATED IN, OR SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK
+ *     ONLY TO SUCH THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
+ *     NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S SPECIFICATION
+ *     OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+ *
+ *     BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE LIABILITY WITH
+ *     RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE, AT MEDIATEK'S OPTION,
+TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE, OR REFUND ANY SOFTWARE LICENSE
+ *     FEES OR SERVICE CHARGE PAID BY BUYER TO MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ *     THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE WITH THE LAWS
+ *     OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF LAWS PRINCIPLES.
+ ************************************************************************************************/
 #ifndef _HDR_H_
 #define _HDR_H_
 
@@ -83,6 +108,8 @@ protected:  ////    Pipes.
 protected:  ////    Buffers.
     IMemDrv *mpIMemDrv;
     MUINT32         mTotalBufferSize;
+    MUINT32         mTotalKernelBufferSize;
+    MUINT32         mTotalUserBufferSize;
 
 	//@TODO use ImgBufInfo to replace IMEMINFO
 	IMEM_BUF_INFO   mpSourceImgBuf[eMaxOutputFrameNum];
@@ -97,13 +124,8 @@ protected:  ////    Buffers.
 	IMEM_BUF_INFO   mpSEImgBuf[eMaxOutputFrameNum];
     MUINT32         mu4SEImgSize;	// SW EIS Image Size.
 
-    #if 0
-    IMEM_BUF_INFO   mpWeightMapBuf[eMaxOutputFrameNum];
-    MUINT32         muWeightMapSize;	// Weighting Map Size.
-    #else
     IMEM_BUF_INFO   mWeightingBuf[eMaxOutputFrameNum];
     MUINT32         mWeightingBufSize;
-    #endif
 
     IMEM_BUF_INFO   mpBlurredWeightMapBuf[eMaxOutputFrameNum];
     MUINT32         muBlurredWeightMapSize;	// Blurred Weighting Map Size.
@@ -145,6 +167,8 @@ protected:  ////    Buffers.
     HDR_PIPE_WEIGHT_TBL_INFO** OriWeight;
 	HDR_PIPE_WEIGHT_TBL_INFO** BlurredWeight;
 
+    ImgBufInfo*     mYUVBufInfoPort1;
+    ImgBufInfo*     mYUVBufInfoPort2;
 
 protected:  ////    Parameters.
 	static MUINT32  mu4RunningNumber;		// A serial number for file saving. For debug.
@@ -170,6 +194,8 @@ protected:  ////    Parameters.
 
     int             mCapturePolicy;
     int             mCapturePriority;
+
+    MUINT32         mCaptueIndex;
 
 public:     ////    for development.
     MUINT32         mTestMode;
@@ -240,7 +266,9 @@ protected:
 //  Utilities.
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 protected:  ////    Buffers.
-    static  MVOID*  allocateCaptureMemoryTask(MVOID* arg);
+    static  MVOID*  allocateCaptureMemoryTask_First(MVOID* arg);
+    static  MVOID*  allocateCaptureMemoryTask_Others(MVOID* arg);
+    static  MVOID*  allocateCaptureMemoryTask_All(MVOID* arg);
     static  MVOID*  allocateProcessMemoryTask(MVOID* arg);
 
     virtual MBOOL   requestSourceImgBuf(void);
@@ -261,8 +289,6 @@ protected:  ////    Buffers.
     virtual MBOOL   releaseDownSizedWeightMapBuf(void);
     virtual MBOOL   requestPostviewImgBuf(void);
     virtual MBOOL   releasePostviewImgBuf(void);
-    virtual MBOOL   requestResultImgBuf(void);
-    virtual MBOOL   releaseResultImgBuf(void);
 
     virtual MBOOL   requestNormalJpegBuf(void);
     virtual MBOOL   releaseNormalJpegBuf(void);
@@ -273,12 +299,10 @@ protected:  ////    Buffers.
     virtual MBOOL   requestHdrThumbnailJpegBuf(void);
     virtual MBOOL   releaseHdrThumbnailJpegBuf(void);
 
-#if 0
-    virtual MBOOL   requestWeightingBuf(void);
-    virtual MBOOL   releaseWeightingBuf(void);
-#endif
     virtual MBOOL   requestBlendingBuf(void);
     virtual MBOOL   releaseBlendingBuf(void);
+
+    virtual MBOOL   updateYUVBufferAddress(void);
 
 //protected:  ////    CDP.
 public:  ////    CDP.
@@ -294,8 +318,8 @@ protected:  ////    Save.
     virtual MBOOL   touchVirtualMemory(MUINT8* vm, MUINT32 size);
     static unsigned int    dumpToFile(char const *fname, unsigned char *pbuf, unsigned int size);
     virtual MUINT32 allocMem(IMEM_BUF_INFO *memBuf);
-    //static  void*   allocMemTask(void *arg);
-    virtual MUINT32 allocMem_Blocking(IMEM_BUF_INFO *memBuf);
+    virtual MUINT32 allocMem_User(IMEM_BUF_INFO *memBuf, MBOOL touch, MBOOL mapping);
+    virtual MUINT32 allocMem_Kernel(IMEM_BUF_INFO *memBuf);
     virtual MBOOL   deallocMem(IMEM_BUF_INFO *memBuf);
 
 protected:  ////    Misc.
@@ -324,9 +348,6 @@ protected:  ////    Misc.
     virtual MBOOL	createSEImg(void);
 
     virtual MBOOL   createJpegImg(ImgBufInfo const & rSrcImgBufInfo, NSCamShot::JpegParam const & rJpgParm, MUINT32 const u4Rot, MUINT32 const u4Flip, ImgBufInfo const & rJpgImgBufInfo, MUINT32 & u4JpegSize);
-    virtual MBOOL   createJpegImgWithThumbnail(ImgBufInfo const &rYuvImgBufInfo, ImgBufInfo const &rPostViewBufInfo, MUINT32 const u4Index, MBOOL bFinal);
-    virtual MBOOL   createHdrJpegImg(void);
-    virtual MBOOL   createNormalJpegImg(void);
 
     virtual NSCamHW::ImgBufInfo
                     imem2ImgBuf(IMEM_BUF_INFO imembufinfo

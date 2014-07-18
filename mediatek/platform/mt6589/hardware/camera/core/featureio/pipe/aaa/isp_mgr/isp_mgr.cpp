@@ -1,3 +1,63 @@
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ */
+/* MediaTek Inc. (C) 2010. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
+
+/********************************************************************************************
+ *     LEGAL DISCLAIMER
+ *
+ *     (Header of MediaTek Software/Firmware Release or Documentation)
+ *
+ *     BY OPENING OR USING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ *     THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE") RECEIVED
+ *     FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON AN "AS-IS" BASIS
+ *     ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES, EXPRESS OR IMPLIED,
+ *     INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR
+ *     A PARTICULAR PURPOSE OR NONINFRINGEMENT. NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY
+ *     WHATSOEVER WITH RESPECT TO THE SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY,
+ *     INCORPORATED IN, OR SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK
+ *     ONLY TO SUCH THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
+ *     NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S SPECIFICATION
+ *     OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+ *
+ *     BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE LIABILITY WITH
+ *     RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE, AT MEDIATEK'S OPTION,
+TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE, OR REFUND ANY SOFTWARE LICENSE
+ *     FEES OR SERVICE CHARGE PAID BY BUYER TO MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ *     THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE WITH THE LAWS
+ *     OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF LAWS PRINCIPLES.
+ ************************************************************************************************/
 #define LOG_TAG "isp_mgr"
 
 #ifndef ENABLE_MY_LOG
@@ -458,7 +518,6 @@ apply(EIspProfile_T eIspProfile)
     
     MY_LOG_IF(ENABLE_MY_LOG,"[%s] create IspDrv \n", __FUNCTION__);
     IspDrv* m_pIspDrv = IspDrv::createInstance();
-//    m_pIspDrv->init();
 
     XNum = reinterpret_cast<ISP_CAM_LSC_CTL2_T*>(REG_INFO_VALUE_PTR(CAM_LSC_CTL2))->SDBLK_XNUM;
     YNum = reinterpret_cast<ISP_CAM_LSC_CTL3_T*>(REG_INFO_VALUE_PTR(CAM_LSC_CTL3))->SDBLK_YNUM;
@@ -500,7 +559,6 @@ apply(EIspProfile_T eIspProfile)
         drv_mode = ISPDRV_MODE_CQ0; //ISPDRV_MODE_ISP;//
         m_pIspDrv->cqDelModule(ISP_DRV_CQ0, CAM_ISP_LSC);
         m_pIspDrv->cqDelModule(ISP_DRV_CQ0, CAM_DMA_LSCI);
-
 
         // defaults
         ISP_WRITE_REG(getIspReg(drv_mode), CAM_LSC_TPIPE_OFST, 0x0);
@@ -551,21 +609,28 @@ apply(EIspProfile_T eIspProfile)
         ISP_WRITE_BITS(getIspReg(drv_mode), CAM_LSC_GAIN_TH, SDBLK_GAIN_TH0,
                 reinterpret_cast<ISP_CAM_LSC_GAIN_TH_T*>(REG_INFO_VALUE_PTR(CAM_LSC_GAIN_TH))->SDBLK_GAIN_TH0);
 
-
         if (reinterpret_cast<ISP_CAM_LSC_EN*>(REG_INFO_VALUE_PTR(CAM_CTL_EN1))->LSC_EN) {
+            ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_CLR, LSCI_EN_CLR, 0);
+            ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_SET, LSCI_EN_SET, 1);
+
             ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_EN1_CLR, LSC_EN_CLR, 0);
             ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_EN1_SET, LSC_EN_SET, 1);
         } else {
             ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_EN1_SET, LSC_EN_SET, 0);
             ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_EN1_CLR, LSC_EN_CLR, 1);
+            
+            ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_SET, LSCI_EN_SET, 0);
+            ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_CLR, LSCI_EN_CLR, 1);
         }
-        //LSC DMA always enable, don't stop due to LSC sub may not disable successfully (Double beffer issue)
-        ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_CLR, LSCI_EN_CLR, 0);
-        ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_SET, LSCI_EN_SET, 1);
 
+        if (reinterpret_cast<ISP_CAM_LSC_EN*>(REG_INFO_VALUE_PTR(CAM_CTL_EN1))->LSC_EN) {
         m_pIspDrv->cqAddModule(ISP_DRV_CQ0, CAM_DMA_LSCI);
         m_pIspDrv->cqAddModule(ISP_DRV_CQ0, CAM_ISP_LSC);
 
+        } else {
+            m_pIspDrv->cqAddModule(ISP_DRV_CQ0, CAM_ISP_LSC);
+            m_pIspDrv->cqAddModule(ISP_DRV_CQ0, CAM_DMA_LSCI);
+        }
 
         MY_LOG_IF(ENABLE_MY_LOG,"%s ISPDRV_MODE_CQ0 addr 0x%0x (LSC_EN, LSCI_EN) = \n"
                 "(%d, %d)\n", __FUNCTION__,
@@ -647,21 +712,21 @@ apply(EIspProfile_T eIspProfile)
         ISP_WRITE_BITS(getIspReg(drv_mode), CAM_LSC_GAIN_TH, SDBLK_GAIN_TH0,
                 reinterpret_cast<ISP_CAM_LSC_GAIN_TH_T*>(REG_INFO_VALUE_PTR(CAM_LSC_GAIN_TH))->SDBLK_GAIN_TH0);
 
-
         if (reinterpret_cast<ISP_CAM_LSC_EN*>(REG_INFO_VALUE_PTR(CAM_CTL_EN1))->LSC_EN) {
+            ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_CLR, LSCI_EN_CLR, 0);
+            ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_SET, LSCI_EN_SET, 1);
+
             ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_EN1_CLR, LSC_EN_CLR, 0);
             ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_EN1_SET, LSC_EN_SET, 1);
         } else {
             ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_EN1_SET, LSC_EN_SET, 0);
             ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_EN1_CLR, LSC_EN_CLR, 1);
+            
+            ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_SET, LSCI_EN_SET, 0);
+            ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_CLR, LSCI_EN_CLR, 1);
         }
-        //LSC DMA always enable, don't stop due to LSC sub may not disable successfully (Double beffer issue)
-        ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_CLR, LSCI_EN_CLR, 0);
-        ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_SET, LSCI_EN_SET, 1);
-
 
         TdriMgr::getInstance().applySetting(ISP_DRV_CQ01_SYNC, TDRI_MGR_FUNC_LSC);
-
 
         MY_LOG_IF(ENABLE_MY_LOG,"%s ISPDRV_MODE_CQ1 addr 0x%0x (LSC_EN, LSCI_EN) = \n"
                 "(%d, %d)\n", __FUNCTION__,
@@ -744,17 +809,19 @@ apply(EIspProfile_T eIspProfile)
         ISP_WRITE_BITS(getIspReg(drv_mode), CAM_LSC_GAIN_TH, SDBLK_GAIN_TH0,
                 reinterpret_cast<ISP_CAM_LSC_GAIN_TH_T*>(REG_INFO_VALUE_PTR(CAM_LSC_GAIN_TH))->SDBLK_GAIN_TH0);
 
-
         if (reinterpret_cast<ISP_CAM_LSC_EN*>(REG_INFO_VALUE_PTR(CAM_CTL_EN1))->LSC_EN) {
+            ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_CLR, LSCI_EN_CLR, 0);
+            ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_SET, LSCI_EN_SET, 1);
+
             ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_EN1_CLR, LSC_EN_CLR, 0);
             ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_EN1_SET, LSC_EN_SET, 1);
         } else {
             ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_EN1_SET, LSC_EN_SET, 0);
             ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_EN1_CLR, LSC_EN_CLR, 1);
+            
+            ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_SET, LSCI_EN_SET, 0);
+            ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_CLR, LSCI_EN_CLR, 1);
         }
-        //LSC DMA always enable, don't stop due to LSC sub may not disable successfully (Double beffer issue)
-        ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_CLR, LSCI_EN_CLR, 0);
-        ISP_WRITE_ENABLE_BITS(getIspReg(drv_mode), CAM_CTL_DMA_EN_SET, LSCI_EN_SET, 1);
 
         TdriMgr::getInstance().applySetting(ISP_DRV_CQ02_SYNC, TDRI_MGR_FUNC_LSC);
 
@@ -768,7 +835,6 @@ apply(EIspProfile_T eIspProfile)
                 ISP_READ_BITS(getIspReg(drv_mode), CAM_LSC_LBLOCK, SDBLK_lHEIGHT)
         );
     }
-//    m_pIspDrv->uninit();
     addressErrorCheck("After ISP_MGR_LSC_T::apply()");
 
     return  MTRUE;
@@ -781,7 +847,7 @@ enableLsc(MBOOL enable)
     MY_LOG_IF(ENABLE_MY_LOG,"%s %d\n", __FUNCTION__, enable);
     reinterpret_cast<ISP_CAM_LSC_EN*>(REG_INFO_VALUE_PTR(CAM_CTL_EN1))->LSC_EN = enable;
     //LSC DMA always enable, don't stop due to LSC sub may not disable successfully (Double beffer issue)
-    reinterpret_cast<ISP_CAM_LSCI_EN*>(REG_INFO_VALUE_PTR(CAM_CTL_DMA_EN))->LSCI_EN = 1;
+    reinterpret_cast<ISP_CAM_LSCI_EN*>(REG_INFO_VALUE_PTR(CAM_CTL_DMA_EN))->LSCI_EN = enable;
 }
 
 MBOOL

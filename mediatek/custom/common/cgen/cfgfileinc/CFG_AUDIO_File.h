@@ -78,6 +78,8 @@
 #define HD_REC_MODE_INDEX_NUM   (30)
 #define HD_REC_FIR_INDEX_NUM    (16)	//extend 8-->16
 
+#define VOIP_INDEX_NUM   (4)
+
 // for voice ui feature
 #define VOICE_FOLDER_NAME_LEN_MAX 32
 #define VOICE_AP_NUM_MAX 16
@@ -185,10 +187,17 @@ enum VOLUME_EXTAMP_TYPE {
 #define     NUM_ABF_PARAM 44
 #define     NUM_ABFWB_PARAM 76
 
+//DMNR calibration data
 typedef struct _AUDIO_CUSTOM_EXTRA_PARAM_STRUCT
 {
-    /* ABF parameters */
-    unsigned short ABF_para[NUM_ABF_PARAM + NUM_ABFWB_PARAM];    //with WB
+	/* ABF parameters */
+	unsigned short ABF_para[NUM_ABF_PARAM + NUM_ABFWB_PARAM];	 //in-call DMNR normal mode with WB
+#ifdef MTK_HANDSFREE_DMNR_SUPPORT
+	unsigned short ABF_para_LoudSPK[NUM_ABF_PARAM + NUM_ABFWB_PARAM];	 //in-call DMNR loud speaker mode with WB
+	unsigned short ABF_para_VR[NUM_ABFWB_PARAM];	//VR DMNR, only WB
+	unsigned short ABF_para_VOIP[NUM_ABFWB_PARAM];	  //VoIP normal mode DMNR, only WB
+	unsigned short ABF_para_VOIP_LoudSPK[NUM_ABFWB_PARAM];	  //VoIP loud speaker mode DMNR, only WB
+#endif
 } AUDIO_CUSTOM_EXTRA_PARAM_STRUCT;
 
 #define CFG_FILE_SPEECH_DUAL_MIC_SIZE    sizeof(AUDIO_CUSTOM_EXTRA_PARAM_STRUCT)
@@ -625,6 +634,32 @@ typedef struct
 
 #define CFG_FILE_AUDIO_AUDENH_CONTROL_OPTION_PAR_SIZE   sizeof(AUDIO_AUDENH_CONTROL_OPTION_STRUCT)
 #define CFG_FILE_AUDIO_AUDENH_CONTROL_OPTION_PAR_TOTAL  1
+
+
+enum AUDIO_VOIP_DEVICE_TYPE {
+	AUDIO_VOIP_DEVICE_NORMAL	= 0,	//path receiver
+	AUDIO_VOIP_DEVICE_SPEAKER	= 1,
+	AUDIO_VOIP_DEVICE_HEADSET	= 2,
+	AUDIO_VOIP_DEVICE_BT		= 3,
+    NUM_AUDIO_VOIP_DEVICE		= VOIP_INDEX_NUM
+};
+
+typedef struct _AUDIO_VOIP_PARAM_STRUCT
+{
+    /* speech enhancement param */
+    unsigned short speech_common_para[SPEECH_COMMON_NUM];	//normal/Loud speaker/headser/BT
+    unsigned short speech_mode_para[VOIP_INDEX_NUM][SPEECH_PARA_NUM];   //normal/Loud speaker/headser/BT 
+    
+    /* speech input FIR */
+    short	in_fir[VOIP_INDEX_NUM][WB_FIR_NUM];	//normal/Loud speaker/headser/BT
+    /* speech output FIR */
+    short	out_fir[VOIP_INDEX_NUM][WB_FIR_NUM];	//normal/Loud speaker/headser/BT
+
+} AUDIO_VOIP_PARAM_STRUCT;
+
+
+#define CFG_FILE_AUDIO_VOIP_PAR_SIZE   sizeof(AUDIO_VOIP_PARAM_STRUCT)
+#define CFG_FILE_AUDIO_VOIP_PAR_TOTAL  1
 
 #endif // _CFG_AUDIO_FILE_H
 

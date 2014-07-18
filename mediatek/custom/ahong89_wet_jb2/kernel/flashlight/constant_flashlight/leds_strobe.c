@@ -18,23 +18,10 @@
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include "kd_camera_hw.h"
-#include <cust_gpio_usage.h>
 #include <linux/hrtimer.h>
 #include <linux/ktime.h>
 #include <linux/xlog.h>
-#include <linux/version.h>
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37))
-#include <linux/mutex.h>
-#else
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)
-#include <linux/semaphore.h>
-#else
-#include <asm/semaphore.h>
-#endif
-#endif
-
-
+#include <mach/upmu_common.h>
 
 /******************************************************************************
  * Debug configuration
@@ -71,118 +58,61 @@
 /******************************************************************************
  * local variables
 ******************************************************************************/
-
-static DEFINE_SPINLOCK(g_strobeSMPLock); /* cotta-- SMP proection */
-
-
+static DEFINE_SPINLOCK(g_strobeSMPLock);
 static u32 strobe_Res = 0;
-static u32 strobe_Timeus = 0;
 static BOOL g_strobe_On = 0;
-
 static int g_duty=-1;
+static int g_step=-1;
 static int g_timeOutTimeMs=0;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37))
-static DEFINE_MUTEX(g_strobeSem);
-#else
-static DECLARE_MUTEX(g_strobeSem);
-#endif
-
-
-#define STROBE_DEVICE_ID 0x60
-
-
 static struct work_struct workTimeOut;
-
 /*****************************************************************************
 Functions
 *****************************************************************************/
-extern int iWriteRegI2C(u8 *a_pSendData , u16 a_sizeSendData, u16 i2cId);
-extern int iReadRegI2C(u8 *a_pSendData , u16 a_sizeSendData, u8 * a_pRecvData, u16 a_sizeRecvData, u16 i2cId);
 static void work_timeOutFunc(struct work_struct *data);
 
-
-
-int FL_Enable(void)
+int FL_enable(void)
 {
-	char buf[2];
-	int reg6;
-	int mode_setting=2;
-	PK_DBG(" FL_Enable\n");
-	if(g_duty>=15)
-		mode_setting=3;
-	reg6 = 8+mode_setting;
-	buf[0]=6;
-	buf[1]=reg6;
-	iWriteRegI2C(buf , 2, STROBE_DEVICE_ID);
+	upmu_set_rg_bst_drv_1m_ck_pdn(0);
+	upmu_set_flash_en(1);
     return 0;
 }
 
-int FL_Disable(void)
+int FL_disable(void)
 {
 
-	char buf[2];
-	int reg6;
-	int mode_setting=2;
-	PK_DBG(" FL_Disablexx1\n");
-	reg6 = mode_setting;
-	buf[0]=6;
-	buf[1]=reg6;
-	iWriteRegI2C(buf , 2, STROBE_DEVICE_ID);
+	upmu_set_flash_en(0);
+	//upmu_set_rg_bst_drv_1m_ck_pdn(1);
+
     return 0;
 }
 
 int FL_dim_duty(kal_uint32 duty)
 {
-	char buf[2];
-	int reg1;
-    PK_DBG(" strobe duty : %u\n",duty);
-    if(duty<0)
-    	duty=0;
-    if(duty>=31)
-    	duty=31;
-    g_duty=duty;
-    reg1=(g_duty+1)*8;
-    if(reg1>255)
-    	reg1=255;
-    buf[0]=1;
-	buf[1]=reg1;
-	iWriteRegI2C(buf , 2, STROBE_DEVICE_ID);
+	upmu_set_flash_dim_duty(duty);
+    return 0;
+}
+
+int FL_step(kal_uint32 step)
+{
+	int sTab[8]={0,2,4,6,9,11,13,15};
+	upmu_set_flash_sel(sTab[step]);
+    return 0;
+}
+
+int FL_init(void)
+{
+	upmu_set_flash_dim_duty(0);
+	upmu_set_flash_sel(0);
+	FL_disable();
+	INIT_WORK(&workTimeOut, work_timeOutFunc);
     return 0;
 }
 
 
-int FL_Init(void)
+int FL_uninit(void)
 {
-
-
-	//down(&g_strobeSem);
-	//up(&g_strobeSem);
-	char buf[2];
-    //spin_lock(&g_strobeSMPLock);
-
-    PK_DBG(" FL_Init line=%d\n",__LINE__);
-
-    buf[0]=5;
-	buf[1]=220;
-	iWriteRegI2C(buf , 2, STROBE_DEVICE_ID); //timeout 1s
-
-	buf[0]=7;
-	buf[1]=0;
-	iWriteRegI2C(buf , 2, STROBE_DEVICE_ID); //strobe_on = 0
-
-	 INIT_WORK(&workTimeOut, work_timeOutFunc);
-
-    //spin_unlock(&g_strobeSMPLock);
-
-    PK_DBG(" FL_Init line=%d\n",__LINE__);
-    return 0;
-}
-
-
-int FL_Uninit(void)
-{
-	FL_Disable();
+	FL_disable();
     return 0;
 }
 
@@ -190,18 +120,18 @@ int FL_Uninit(void)
 User interface
 *****************************************************************************/
 
+
 static void work_timeOutFunc(struct work_struct *data)
 {
-    FL_Disable();
+	FL_disable();
     PK_DBG("ledTimeOut_callback\n");
     //printk(KERN_ALERT "work handler function./n");
 }
-
-
-
 enum hrtimer_restart ledTimeOutCallback(struct hrtimer *timer)
 {
-    schedule_work(&workTimeOut);
+	PK_DBG("ledTimeOut_callback\n");
+	schedule_work(&workTimeOut);
+
     return HRTIMER_NORESTART;
 }
 static struct hrtimer g_timeOutTimer;
@@ -218,13 +148,14 @@ void timerInit(void)
 static int constant_flashlight_ioctl(MUINT32 cmd, MUINT32 arg)
 {
 	int i4RetValue = 0;
-	int ior_shift;
-	int iow_shift;
-	int iowr_shift;
-	ior_shift = cmd - (_IOR(FLASHLIGHT_MAGIC,0, int));
-	iow_shift = cmd - (_IOW(FLASHLIGHT_MAGIC,0, int));
-	iowr_shift = cmd - (_IOWR(FLASHLIGHT_MAGIC,0, int));
-	PK_DBG("constant_flashlight_ioctl() line=%d ior_shift=%d, iow_shift=%d iowr_shift=%d arg=%d\n",__LINE__, ior_shift, iow_shift, iowr_shift, arg);
+	int ior;
+	int iow;
+	int iowr;
+	ior = _IOR(FLASHLIGHT_MAGIC,0, int);
+	iow = _IOW(FLASHLIGHT_MAGIC,0, int);
+	iowr = _IOWR(FLASHLIGHT_MAGIC,0, int);
+	PK_DBG("constant_flashlight_ioctl() line=%d cmd=%d, ior=%d, iow=%d iowr=%d arg=%d\n",__LINE__, cmd, ior, iow, iowr, arg);
+	PK_DBG("constant_flashlight_ioctl() line=%d cmd-ior=%d, cmd-iow=%d cmd-iowr=%d arg=%d\n",__LINE__, cmd-ior, cmd-iow, cmd-iowr, arg);
     switch(cmd)
     {
 
@@ -236,13 +167,15 @@ static int constant_flashlight_ioctl(MUINT32 cmd, MUINT32 arg)
 
     	case FLASH_IOC_SET_DUTY :
     		PK_DBG("FLASHLIGHT_DUTY: %d\n",arg);
+    		g_duty=arg;
     		FL_dim_duty(arg);
     		break;
 
 
     	case FLASH_IOC_SET_STEP:
     		PK_DBG("FLASH_IOC_SET_STEP: %d\n",arg);
-
+    		g_step=arg;
+    		FL_step(arg);
     		break;
 
     	case FLASH_IOC_SET_ONOFF :
@@ -255,12 +188,14 @@ static int constant_flashlight_ioctl(MUINT32 cmd, MUINT32 arg)
 					ktime = ktime_set( 0, g_timeOutTimeMs*1000000 );
 					hrtimer_start( &g_timeOutTimer, ktime, HRTIMER_MODE_REL );
 	            }
-    			FL_Enable();
+    			FL_enable();
+    			g_strobe_On=1;
     		}
     		else
     		{
-    			FL_Disable();
+    			FL_disable();
 				hrtimer_cancel( &g_timeOutTimer );
+				g_strobe_On=0;
     		}
     		break;
 		default :
@@ -281,12 +216,10 @@ static int constant_flashlight_open(void *pArg)
 
 	if (0 == strobe_Res)
 	{
-	    FL_Init();
+	    FL_init();
 		timerInit();
 	}
-	PK_DBG("constant_flashlight_open line=%d\n", __LINE__);
 	spin_lock_irq(&g_strobeSMPLock);
-
 
     if(strobe_Res)
     {
@@ -298,9 +231,7 @@ static int constant_flashlight_open(void *pArg)
         strobe_Res += 1;
     }
 
-
     spin_unlock_irq(&g_strobeSMPLock);
-    PK_DBG("constant_flashlight_open line=%d\n", __LINE__);
 
     return i4RetValue;
 
@@ -316,14 +247,13 @@ static int constant_flashlight_release(void *pArg)
         spin_lock_irq(&g_strobeSMPLock);
 
         strobe_Res = 0;
-        strobe_Timeus = 0;
 
         /* LED On Status */
         g_strobe_On = FALSE;
 
         spin_unlock_irq(&g_strobeSMPLock);
 
-    	FL_Uninit();
+    	FL_uninit();
     }
 
     PK_DBG(" Done\n");

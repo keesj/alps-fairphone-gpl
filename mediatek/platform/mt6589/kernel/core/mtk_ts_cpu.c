@@ -1,3 +1,21 @@
+/***
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK-DISTRIBUTED SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER
+ * ON AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL
+ * WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR
+ * NONINFRINGEMENT. NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH
+ * RESPECT TO THE SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY,
+ * INCORPORATED IN, OR SUPPLIED WITH THE MEDIATEK-DISTRIBUTED SOFTWARE, AND RECEIVER AGREES
+ * TO LOOK ONLY TO SUCH THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO.
+ * RECEIVER EXPRESSLY ACKNOWLEDGES THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO
+ * OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES CONTAINED IN MEDIATEK-DISTRIBUTED
+ * SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK-DISTRIBUTED SOFTWARE
+ * RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM.
+ */
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/dmi.h>
@@ -127,7 +145,7 @@ void get_thermal_slope_intercept(struct TS_PTPOD *ts_info)
 {
 	unsigned int temp0, temp1, temp2;
 	struct TS_PTPOD ts_ptpod;
-	
+
 	//temp0 = (10000*100000/4096/g_gain)*15/18;
 	temp0 = (10000*100000/g_gain)*15/18;
 //	printk("temp0=%d\n", temp0);
@@ -142,7 +160,7 @@ void get_thermal_slope_intercept(struct TS_PTPOD *ts_info)
 //	printk("temp1=%d\n", temp1);
 	//ts_ptpod.ts_MTS = temp1 - (2*temp1) + 2048;
 	ts_ptpod.ts_MTS = temp1;
-	
+
 	temp0 = (g_degc_cali *10 / 2);
 	temp1 = ((10000*100000/4096/g_gain)*g_oe + g_x_roomtabb*10)*15/18;
 //	printk("temp1=%d\n", temp1);
@@ -156,12 +174,12 @@ void get_thermal_slope_intercept(struct TS_PTPOD *ts_info)
 	}
 //	printk("temp2=%d\n", temp2);
 	ts_ptpod.ts_BTS = (temp0+temp2-250)*4/10;
-	
+
 	//ts_info = &ts_ptpod;
 	ts_info->ts_MTS = ts_ptpod.ts_MTS;
 	ts_info->ts_BTS = ts_ptpod.ts_BTS;
 	printk("ts_MTS=%d, ts_BTS=%d\n",ts_ptpod.ts_MTS, ts_ptpod.ts_BTS);
-	
+
 	return;
 }
 EXPORT_SYMBOL(get_thermal_slope_intercept);
@@ -175,14 +193,14 @@ static void set_high_low_threshold(int high, int low)
 
 	if( (curr_high==high) && (curr_low==low) )
 		return;
-	
+
 	curr_high = high;
 	curr_low = low;
 //	mtktscpu_dprintk("Set_high_low_threshold: curr_high=%d, curr_low=%d\n", curr_high, curr_low);
-	
+
 	raw_low = temperature_to_raw_abb(low);	//bigger
 	raw_high = temperature_to_raw_abb(high);//smaller
-	
+
 	mtktscpu_dprintk("[set_high_low_threshold]: raw_low=%d, raw_high=%d\n",raw_low, raw_high);
 	//calculate high offset threshold, hot to normal threshold, low offset threshold
 	temp = (raw_low - raw_high)/4;
@@ -190,11 +208,11 @@ static void set_high_low_threshold(int high, int low)
 	raw_hot_normal = raw_high_offset + temp;
 	raw_low_offset = raw_hot_normal + temp;
 //	mtktscpu_dprintk("set_high_low_threshold, raw_high_offset=%d, raw_hot_normal=%d, raw_low_offset=%d\n", raw_high_offset, raw_hot_normal, raw_low_offset);
-	
+
 //	mt65xx_reg_sync_writel(0x0, TEMPMONCTL0);           // disable periodoc temperature sensing point 0
 	temp = DRV_Reg32(TEMPMONINT);
 	mt65xx_reg_sync_writel(temp & 0xFFFFFFFC, TEMPMONINT);			// disable interrupt
-	
+
 	mt65xx_reg_sync_writel(raw_high, TEMPHTHRE);			// set hot threshold
 	mt65xx_reg_sync_writel(raw_high_offset, TEMPOFFSETH);	// set high offset threshold
 	mt65xx_reg_sync_writel(raw_hot_normal, TEMPH2NTHRE);	// set hot to normal threshold
@@ -206,7 +224,7 @@ static void set_high_low_threshold(int high, int low)
 	mt65xx_reg_sync_writel(temp, TEMPMONINT);		// enable cold threshold, and high threshold interrupt
 //	mt65xx_reg_sync_writel(temp | 0x00ffff, TEMPMONINT);
 //	mtktscpu_dprintk("set_high_low_threshold end, temp=0x%x", temp);
-	
+
 }
 */
 static irqreturn_t thermal_interrupt_handler(int irq, void *dev_id)
@@ -234,7 +252,7 @@ static irqreturn_t thermal_interrupt_handler(int irq, void *dev_id)
 			set_high_low_threshold(trip_temp[i-1], 10000);
 		else
 			set_high_low_threshold(trip_temp[i], trip_temp[i+1]);
-*/			
+*/
 	}
 	if (ret & THERMAL_MON_HINTSTS0)
 	{
@@ -254,13 +272,13 @@ static irqreturn_t thermal_interrupt_handler(int irq, void *dev_id)
 			xlog_printk(ANDROID_LOG_DEBUG, "[Power/CPU_Thermal]", "thermal_isr: hot interrupt error\n");
 		else
 			set_high_low_threshold(trip_temp[i-1], trip_temp[i]);
-*/			
+*/
 	}
 
 	if(ret & THERMAL_tri_SPM_State0)
 		xlog_printk(ANDROID_LOG_DEBUG, "[Power/CPU_Thermal]", "thermal_isr: Thermal state0 to trigger SPM state0 \n");
 	if(ret & THERMAL_tri_SPM_State1)
-		xlog_printk(ANDROID_LOG_DEBUG, "[Power/CPU_Thermal]", "thermal_isr: Thermal state1 to trigger SPM state1\n");	
+		xlog_printk(ANDROID_LOG_DEBUG, "[Power/CPU_Thermal]", "thermal_isr: Thermal state1 to trigger SPM state1\n");
 	if(ret & THERMAL_tri_SPM_State2)
 		xlog_printk(ANDROID_LOG_DEBUG, "[Power/CPU_Thermal]", "thermal_isr: Thermal state2 to trigger SPM state2\n");
 
@@ -271,7 +289,7 @@ static irqreturn_t thermal_interrupt_handler(int irq, void *dev_id)
 static void thermal_reset_and_initial(void)
 {
 	UINT32 temp = 0;
-    
+
 	mtktscpu_dprintk("[Reset and init thermal controller]\n");
 
 	//reset thremal ctrl
@@ -292,10 +310,10 @@ static void thermal_reset_and_initial(void)
 
 
 	mt65xx_reg_sync_writel(0x000003FF, TEMPMONCTL1);    // counting unit is 1024 * 20ns
-	
-	
+
+
     mt65xx_reg_sync_writel(0x03FF0000, TEMPMONCTL2);	// sensing interval is 1024 * 20ns = 20ms
-	
+
 
 	//mt65xx_reg_sync_writel(0x0000000F, TEMPAHBPOLL);    // polling interval to check if temperature sense is ready, 32k*16
 	mt65xx_reg_sync_writel(0x00FFFFFF, TEMPAHBPOLL);		//total update time = 0x1000000x20ns +  20ms
@@ -303,33 +321,33 @@ static void thermal_reset_and_initial(void)
 
 	mt65xx_reg_sync_writel(0x00000000, TEMPMONIDET0);   // times for interrupt occurrance
 //	mt65xx_reg_sync_writel(0x00000000, TEMPMONIDET1);   // times for interrupt occurrance
-    
+
 //	mt65xx_reg_sync_writel(0x0000008FC, TEMPHTHRE);     // set hot threshold
 //	mt65xx_reg_sync_writel(0x00000960, TEMPOFFSETH);    // set high offset threshold
 //	mt65xx_reg_sync_writel(0x00000A8C, TEMPH2NTHRE);    // set hot to normal threshold
 //	mt65xx_reg_sync_writel(0x00000C80, TEMPOFFSETL);    // set low offset threshold
 //	mt65xx_reg_sync_writel(0x00000CE4, TEMPCTHRE);      // set cold threshold
-    
+
 	mt65xx_reg_sync_writel(0x0000000, TEMPMSRCTL0);     // temperature sampling control, one sample
 
 	mt65xx_reg_sync_writel(0x800, AUXADC_CON1_SET_V);    // enable auxadc channel 11 immediate mode
-    
+
 	//mt65xx_reg_sync_writel(0x0, TEMPADCPNP0);                       // this value will be stored to TEMPPNPMUXADDR (TEMPSPARE0) automatically by hw
 	//mt65xx_reg_sync_writel((UINT32) TEMPSPARE0, TEMPPNPMUXADDR);    // AHB address for pnp sensor mux selection
-    
+
 	mt65xx_reg_sync_writel(0x800, TEMPADCMUX);                          // this value will be stored to TEMPPNPMUXADDR (TEMPSPARE0) automatically by hw
 	mt65xx_reg_sync_writel((UINT32) AUXADC_CON1_CLR_P, TEMPADCMUXADDR); // AHB address for auxadc mux selection
-    
+
 	mt65xx_reg_sync_writel(0x800, TEMPADCEN);                           // AHB value for auxadc enable
 	mt65xx_reg_sync_writel((UINT32) AUXADC_CON1_SET_P, TEMPADCENADDR);  // AHB address for auxadc enable (channel 0 immediate mode selected)
-    
+
 	mt65xx_reg_sync_writel((UINT32) AUXADC_DAT11_P, TEMPADCVALIDADDR);   // AHB address for auxadc valid bit
 	mt65xx_reg_sync_writel((UINT32) AUXADC_DAT11_P, TEMPADCVOLTADDR);    // AHB address for auxadc voltage output
 	mt65xx_reg_sync_writel(0x0, TEMPRDCTRL);                            // read valid & voltage are at the same register
 	mt65xx_reg_sync_writel(0x0000002C, TEMPADCVALIDMASK);               // indicate where the valid bit is (the 12th bit is valid bit and 1 is valid)
 	mt65xx_reg_sync_writel(0x0, TEMPADCVOLTAGESHIFT);                   // do not need to shift
 	mt65xx_reg_sync_writel(0x2, TEMPADCWRITECTRL);                      // enable auxadc mux write transaction
-    
+
 	//mt65xx_reg_sync_writel(0x0000FFFF, TEMPMONINT);                     // enable all interrupt
 	mt65xx_reg_sync_writel(0x00000001, TEMPMONCTL0);                    // enable periodoc temperature sensing point 0
 	mt65xx_reg_sync_writel(0x40, TS_CON0);	//read abb need
@@ -340,9 +358,9 @@ static void set_thermal_ctrl_trigger_SPM(int temperature)
 {
 	int temp = 0;
 	int raw_high, raw_middle, raw_low;
-	
+
 	mtktscpu_dprintk("[Set_thermal_ctrl_trigger_SPM]: temperature=%d\n", temperature);
-	
+
 	//temperature to trigger SPM state2
 	raw_high = temperature_to_raw_abb(temperature);
 	raw_middle = temperature_to_raw_abb(70000);
@@ -350,12 +368,12 @@ static void set_thermal_ctrl_trigger_SPM(int temperature)
 
 	temp = DRV_Reg32(TEMPMONINT);
 	mt65xx_reg_sync_writel(temp & 0x8FFFFFFF, TEMPMONINT);	// enable trigger SPM interrupt
-	
+
 	mt65xx_reg_sync_writel(0x20000, TEMPPROTCTL);
 	mt65xx_reg_sync_writel(raw_low, TEMPPROTTA);
 	mt65xx_reg_sync_writel(raw_middle, TEMPPROTTB);
 	mt65xx_reg_sync_writel(raw_high, TEMPPROTTC);
-	
+
 	mt65xx_reg_sync_writel(temp | 0xE0000000, TEMPMONINT);	// enable trigger SPM interrupt
 }
 
@@ -385,22 +403,22 @@ int mtk_cpufreq_register(struct mtk_cpu_power_info *freqs, int num)
 		cl_dev_state = kzalloc((num) * sizeof(unsigned int), GFP_KERNEL);
 		if(cl_dev_state==NULL)
 			return -ENOMEM;
-	
+
 		cl_dev = (struct thermal_cooling_device **)kzalloc((num) * sizeof(struct thermal_cooling_device *), GFP_KERNEL);
 		if(cl_dev==NULL)
 			return -ENOMEM;
-	
+
 		cooler_name = kzalloc((num) * sizeof(char) * 20, GFP_KERNEL);
 		if(cooler_name==NULL)
 			return -ENOMEM;
-	
+
 		//for(i=0; i<num; i++)
 		//	sprintf(cooler_name+(i*20), "%d", mtk_cpu_power[i].cpufreq_power);
 		for(i=0; i<num; i++)
 			sprintf(cooler_name+(i*20), "%d", ((7+i)*100));
-	
+
 		Num_of_OPP = num;
-	}*/	
+	}*/
 	return 0;
 }
 EXPORT_SYMBOL(mtk_cpufreq_register);
@@ -409,7 +427,7 @@ static int init_cooler(void)
 {
 	int i;
 	int num=19;//700~2500
-	
+
 	cl_dev_state = kzalloc((num) * sizeof(unsigned int), GFP_KERNEL);
 	if(cl_dev_state==NULL)
 		return -ENOMEM;
@@ -449,7 +467,7 @@ int mtk_gpufreq_register(struct mtk_gpu_power_info *freqs, int num)
 		printk("[Power/CPU_Thermal] freqs[%d].cpufreq_khz=%u, .cpufreq_power=%u\n",
 				i, freqs[i].gpufreq_khz, freqs[i].gpufreq_power);
 	}
-	
+
 	Num_of_GPU_OPP = num;
 	return 0;
 }
@@ -464,30 +482,30 @@ static void thermal_cal_prepare(void)
 	temp1 = DRV_Reg32(0xF0009104);
 	temp2 = DRV_Reg32(0xF0009108);
 	printk("[Power/CPU_Thermal] [Thermal calibration] Reg(0xF0009100)=0x%x, Reg(0xF0009104)=0x%x, Reg(0xF0009108)=0x%x\n", temp0, temp1, temp2);
-	
+
 	g_adc_ge = ((temp1 & 0xFF000000)>>24) + (((temp2&0x000C0000)>>18)<<8);
 	g_adc_oe = ((temp1 & 0x00FF0000)>>16) + (((temp2&0x00030000)>>16)<<8);
-	g_corner_TS = (temp2 & 0x00100000)>>20; 
-	
+	g_corner_TS = (temp2 & 0x00100000)>>20;
+
 	g_o_vtsmcu1 = (temp0 & 0x03FE0000)>>17;
 	g_o_vtsmcu2 = (temp0 & 0x0001FF00)>>8;
 	g_o_vtsmcu3 = ((temp2 & 0xFF000000)>>24)| ((temp1 & 0x00000001)<<8) ;
 	g_o_vtsabb = (temp1 & 0x0000FF80)>>7 ;
-	
+
 	g_degc_cali = (temp0 & 0x0000007E)>>1;
 	g_adc_cali_en = (temp0 & 0x00000001);
 	g_o_slope = (temp0 & 0xFC000000)>>26;
 	g_o_slope_sign = (temp0 & 0x00000080)>>7;
-	
+
 	g_id=0; //use TSMC now
 	if(g_id==0)
 	{
 		g_o_slope=0;
-	}	
-	
+	}
+
 	if(g_adc_cali_en == 1)
 	{
-		//thermal_enable = true;        
+		//thermal_enable = true;
 	}
 	else
 	{
@@ -500,7 +518,7 @@ static void thermal_cal_prepare(void)
 		//g_o_vtsabb = 260;
 		g_o_vtsabb = 272;
 	}
-	printk("[Power/CPU_Thermal] [Thermal calibration] g_adc_ge = 0x%x, g_adc_oe = 0x%x, g_degc_cali = 0x%x, g_adc_cali_en = 0x%x, g_o_slope = 0x%x, g_o_slope_sign = 0x%x, g_id = 0x%x\n", 
+	printk("[Power/CPU_Thermal] [Thermal calibration] g_adc_ge = 0x%x, g_adc_oe = 0x%x, g_degc_cali = 0x%x, g_adc_cali_en = 0x%x, g_o_slope = 0x%x, g_o_slope_sign = 0x%x, g_id = 0x%x\n",
 		g_adc_ge, g_adc_oe, g_degc_cali, g_adc_cali_en, g_o_slope, g_o_slope_sign, g_id);
 	printk("[Power/CPU_Thermal] [Thermal calibration] g_o_vtsmcu1 = 0x%x, g_o_vtsmcu2 = 0x%x, g_o_vtsmcu3 = 0x%x, g_o_vtsabb = 0x%x\n",
 		g_o_vtsmcu1, g_o_vtsmcu2, g_o_vtsmcu3, g_o_vtsabb);
@@ -509,29 +527,29 @@ static void thermal_cal_prepare(void)
 static void thermal_cal_prepare_2(kal_uint32 ret)
 {
 	kal_int32 format_1, format_2, format_3, format_abb= 0;
-	
+
 	if(g_corner_TS==1)
 	{
 		g_ge = ((g_adc_ge - 512) * 10000 ) / 4096; // ge * 10000
 		g_oe = (g_adc_oe - 512);
-	}	
+	}
 	else
-	{	
+	{
 		g_ge = ((g_adc_ge - 128) * 10000 ) / 4096; // ge * 10000
 		g_oe = (g_adc_oe - 128);
 	}
 	g_gain = (10000 + g_ge);
-	
+
 	format_1 = (g_o_vtsmcu1 + 3350 - g_oe);
 	format_2 = (g_o_vtsmcu2 + 3350 - g_oe);
 	format_3 = (g_o_vtsmcu3 + 3350 - g_oe);
 	format_abb = (g_o_vtsabb + 3350 - g_oe);
-	
+
 //	g_x_roomt1 = (((format_1 * 10000) / 4096) * 10000) / g_gain; // x_roomt * 10000
 //	g_x_roomt2 = (((format_2 * 10000) / 4096) * 10000) / g_gain; // x_roomt * 10000
 //	g_x_roomt3 = (((format_3 * 10000) / 4096) * 10000) / g_gain; // x_roomt * 10000
 	g_x_roomtabb = (((format_abb * 10000) / 4096) * 10000) / g_gain; // x_roomt * 10000
-	
+
 	printk("[Power/CPU_Thermal] [Thermal calibration] g_ge = %d, g_oe = %d, g_gain = %d, g_x_roomtabb = %d\n",
 		g_ge, g_oe, g_gain, g_x_roomtabb);
 }
@@ -565,12 +583,12 @@ static kal_int32 thermal_cal_exec(kal_uint32 ret)
 	{
 		//format_4 = ((format_3 * 100) / (139-g_o_slope)); // uint = 0.1 deg
 		format_4 = ((format_3 * 100) / (165-g_o_slope)); // uint = 0.1 deg
-	} 
+	}
 	format_4 = format_4 - (2 * format_4);
-	
+
 	t_current = (format_1 * 10) + format_4; // uint = 0.1 deg
-	
-	return t_current;	
+
+	return t_current;
 }
 */
 
@@ -624,14 +642,14 @@ static kal_int32 raw_to_temperature_abb(kal_uint32 ret)
 	{
 		return 0;
 	}
-	
+
 	//format_1 = (g_degc_cali / 2);
 	format_1 = (g_degc_cali*10 / 2);
 	format_2 = (y_curr - g_oe);
 	format_3 = (((((format_2) * 10000) / 4096) * 10000) / g_gain) - g_x_roomtabb;
 	format_3 = format_3 * 15/18;
 
-	//format_4 = ((format_3 * 100) / 139); // uint = 0.1 deg 
+	//format_4 = ((format_3 * 100) / 139); // uint = 0.1 deg
 	if(g_o_slope_sign==0)
 	{
 		//format_4 = ((format_3 * 100) / (139+g_o_slope)); // uint = 0.1 deg
@@ -641,13 +659,13 @@ static kal_int32 raw_to_temperature_abb(kal_uint32 ret)
 	{
 		//format_4 = ((format_3 * 100) / (139-g_o_slope)); // uint = 0.1 deg
 		format_4 = ((format_3 * 100) / (165-g_o_slope)); // uint = 0.1 deg
-	}    
+	}
 	format_4 = format_4 - (2 * format_4);
-	
+
 	//t_current = (format_1 * 10) + format_4; // uint = 0.1 deg
 	t_current = format_1 + format_4; // uint = 0.1 deg
-	
-	return t_current;	
+
+	return t_current;
 }
 /*
 static int thermal_auxadc_get_data(int times, int Channel)
@@ -665,7 +683,7 @@ static int thermal_auxadc_get_data(int times, int Channel)
 	{
 		ret_value = IMM_GetOneChannelValue(Channel, data, &ret_temp);
 		ret += ret_temp;
-		mtktscpu_dprintk("[thermal_auxadc_get_data(ADCIN5)]: ret_temp=%d\n",ret_temp);        
+		mtktscpu_dprintk("[thermal_auxadc_get_data(ADCIN5)]: ret_temp=%d\n",ret_temp);
 	}
 
 	ret = ret / times;
@@ -710,7 +728,7 @@ static int mtktscpu_get_hw_temp(void)
 	t_ret1 = t_ret1 * 100;
 	abb[MA_counter] = t_ret1;
 	mtktscpu_dprintk("[mtktscpu_get_hw_temp] T_ABB, %d\n", t_ret1);
-	
+
 
 	if(MA_counter==0 && MA_first_time==0 && MA_len!=1)
 	{
@@ -763,12 +781,12 @@ static int mtktscpu_get_hw_temp(void)
 static int get_immediate_temp(void)
 {
 	int curr_raw, curr_temp;
-	
+
 	curr_raw = DRV_Reg32(TEMPMSR0);
 	curr_raw = curr_raw & 0x0fff;
 	curr_temp = raw_to_temperature_abb(curr_raw);
 	curr_temp = curr_temp*100;
-	
+
 	mtktscpu_dprintk("[get_immediate_temp] temp=%d, raw=%d\n", curr_temp, curr_raw);
 	return curr_temp;
 }
@@ -781,7 +799,7 @@ static int mtktscpu_get_TC_temp(void)
 	static int abb[60]={0};
 
 	mutex_lock(&TS_lock);
-	
+
 	if(proc_write_flag==1)
 	{
 		MA_counter=0, MA_first_time=0;
@@ -789,11 +807,11 @@ static int mtktscpu_get_TC_temp(void)
 		proc_write_flag=0;
 		mtktscpu_dprintk("[mtktscpu_get_hw_temp]:MA_len=%d",MA_len);
 	}
-	
+
 	t_ret1 = get_immediate_temp();
 	abb[MA_counter] = t_ret1;
 //	mtktscpu_dprintk("[mtktscpu_get_temp] temp=%d, raw=%d\n", t_ret1, curr_raw);
-	
+
 	if(MA_counter==0 && MA_first_time==0 && MA_len!=1)
 	{
 		MA_counter++;
@@ -832,7 +850,7 @@ static int mtktscpu_get_temp(struct thermal_zone_device *thermal,
 							unsigned long *t)
 {
 	int curr_temp;
-	
+
 	curr_temp = mtktscpu_get_TC_temp();
 
 	if((curr_temp>100000) | (curr_temp<-30000))
@@ -842,6 +860,20 @@ static int mtktscpu_get_temp(struct thermal_zone_device *thermal,
 	*t = (unsigned long) curr_temp;
 	return 0;
 }
+
+int mtktscpu_get_cpu_temp(void)
+{
+	int curr_temp;
+
+	curr_temp = mtktscpu_get_TC_temp();
+
+	if((curr_temp>100000) | (curr_temp<-30000))
+		printk("[Power/CPU_Thermal] CPU T=%d\n",curr_temp);
+
+
+	return ((unsigned long) curr_temp);
+}
+
 
 static int mtktscpu_bind(struct thermal_zone_device *thermal,
 						struct thermal_cooling_device *cdev)
@@ -900,7 +932,7 @@ static int mtktscpu_bind(struct thermal_zone_device *thermal,
 		mtktscpu_dprintk("[mtktscpu_bind] %s\n", cdev->type);
 	}
 	else
-	{	
+	{
 		return 0;
 	}
 
@@ -1084,34 +1116,34 @@ static int _mtktscpu_set_power_consumption_state(void)
 	if(i==Num_of_OPP)
 	{
 		if(previous_step!=-1)
-		{	
+		{
 			previous_step = -1;
 			xlog_printk(ANDROID_LOG_INFO, "Power/CPU_Thermal", "Free all thermal limit, previous_opp=%d\n", previous_step);
 			mt_cpufreq_thermal_protect(0);
 			mt_gpufreq_thermal_protect(0);
 		}
-	}	
+	}
 	return 0;
 }
 
 
 static int cpufreq_F0x2_get_max_state(struct thermal_cooling_device *cdev,
 				 unsigned long *state)
-{   
-	mtktscpu_dprintk("cpufreq_F0x2_get_max_state\n");     
-	*state = 1;    
+{
+	mtktscpu_dprintk("cpufreq_F0x2_get_max_state\n");
+	*state = 1;
 	return 0;
 }
 static int cpufreq_F0x2_get_cur_state(struct thermal_cooling_device *cdev,
 				 unsigned long *state)
-{   
+{
 	int i=0;
 	mtktscpu_dprintk("get_cur_state, %s\n", cdev->type);
 
 	for(i=0; i<Num_of_OPP; i++)
 	{
 		if(!strcmp(cdev->type, &cooler_name[i*20]))
-		{	
+		{
 			*state = cl_dev_state[i];
 			mtktscpu_dprintk("get_cur_state: cl_dev_state[%d]=%d\n",i, cl_dev_state[i]);
 		}
@@ -1145,22 +1177,22 @@ static int cpufreq_F0x2_set_cur_state(struct thermal_cooling_device *cdev,
  */
 static int sysrst_get_max_state(struct thermal_cooling_device *cdev,
 				unsigned long *state)
-{   
-	mtktscpu_dprintk("sysrst_get_max_state\n");     
+{
+	mtktscpu_dprintk("sysrst_get_max_state\n");
 	*state = 1;
 	return 0;
 }
 static int sysrst_get_cur_state(struct thermal_cooling_device *cdev,
 				unsigned long *state)
-{        
-	mtktscpu_dprintk("sysrst_get_cur_state\n");   
+{
+	mtktscpu_dprintk("sysrst_get_cur_state\n");
 	*state = cl_dev_sysrst_state;
 	return 0;
 }
 static int sysrst_set_cur_state(struct thermal_cooling_device *cdev,
 				unsigned long state)
 {
-	mtktscpu_dprintk("sysrst_set_cur_state\n");  
+	mtktscpu_dprintk("sysrst_set_cur_state\n");
 	cl_dev_sysrst_state = state;
 	if(cl_dev_sysrst_state == 1)
 	{
@@ -1170,7 +1202,7 @@ static int sysrst_set_cur_state(struct thermal_cooling_device *cdev,
 		printk("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
 
 		BUG();
-		//arch_reset(0,NULL);   
+		//arch_reset(0,NULL);
 	}
 	return 0;
 }
@@ -1198,18 +1230,18 @@ static int mtktscpu_read_opp(char *buf, char **start, off_t off, int count, int 
 	for(i=0; i<Num_of_OPP; i++)
 	{
 		if(1==cl_dev_state[i])
-		{	
+		{
 			p += sprintf(p, "%s\n", &cooler_name[i*20]);
 			break;
 		}
-	}	
-		
+	}
+
 	// CTFang 2012/10/26: if no limit, still return a string to indicate there is no limit.
 	if (i == Num_of_OPP)
 	{
 		p += sprintf(p, "no_limit\n");
 	}
-		
+
 	*start = buf + off;
 
 	len = p - buf;
@@ -1217,7 +1249,7 @@ static int mtktscpu_read_opp(char *buf, char **start, off_t off, int count, int 
 		len -= off;
 	else
 		len = 0;
-        
+
 	return len < count ? len  : count;
 }
 
@@ -1226,9 +1258,9 @@ static int mtktscpu_read_cal(char *buf, char **start, off_t off, int count, int 
 	int len = 0;
 	char *p = buf;
 
-	p += sprintf(p, "mtktscpu cal:\nReg(0xF0009100)=0x%x, Reg(0xF0009104)=0x%x, Reg(0xF0009108)=0x%x\n", 
+	p += sprintf(p, "mtktscpu cal:\nReg(0xF0009100)=0x%x, Reg(0xF0009104)=0x%x, Reg(0xF0009108)=0x%x\n",
 	                DRV_Reg32(0xF0009100), DRV_Reg32(0xF0009104), DRV_Reg32(0xF0009108));
-		
+
 	*start = buf + off;
 
 	len = p - buf;
@@ -1236,7 +1268,7 @@ static int mtktscpu_read_cal(char *buf, char **start, off_t off, int count, int 
 		len -= off;
 	else
 		len = 0;
-        
+
 	return len < count ? len  : count;
 }
 
@@ -1330,7 +1362,7 @@ static ssize_t mtktscpu_write(struct file *file, const char *buffer, unsigned lo
 //	int curr_temp;
 
 //	return 0; //test
-	
+
 	len = (count < (sizeof(desc) - 1)) ? count : (sizeof(desc) - 1);
 	if (copy_from_user(desc, buffer, len))
 	{
@@ -1349,23 +1381,23 @@ static ssize_t mtktscpu_write(struct file *file, const char *buffer, unsigned lo
 
 		mtktscpu_dprintk("[mtktscpu_write] mtktscpu_unregister_thermal\n");
 		mtktscpu_unregister_thermal();
-	
+
 		for(i=0; i<num_trip; i++)
-			g_THERMAL_TRIP[i] = t_type[i];	
+			g_THERMAL_TRIP[i] = t_type[i];
 
 		g_bind0[0]=g_bind1[0]=g_bind2[0]=g_bind3[0]=g_bind4[0]=g_bind5[0]=g_bind6[0]=g_bind7[0]=g_bind8[0]=g_bind9[0]='\0';
 
 		for(i=0; i<20; i++)
 		{
-			g_bind0[i]=bind0[i]; 
-			g_bind1[i]=bind1[i]; 
-			g_bind2[i]=bind2[i]; 
-			g_bind3[i]=bind3[i]; 
+			g_bind0[i]=bind0[i];
+			g_bind1[i]=bind1[i];
+			g_bind2[i]=bind2[i];
+			g_bind3[i]=bind3[i];
 			g_bind4[i]=bind4[i];
-			g_bind5[i]=bind5[i]; 
-			g_bind6[i]=bind6[i]; 
-			g_bind7[i]=bind7[i]; 
-			g_bind8[i]=bind8[i]; 
+			g_bind5[i]=bind5[i];
+			g_bind6[i]=bind6[i];
+			g_bind7[i]=bind7[i];
+			g_bind8[i]=bind8[i];
 			g_bind9[i]=bind9[i];
 		}
 
@@ -1385,7 +1417,7 @@ cooldev5=%s,cooldev6=%s,cooldev7=%s,cooldev8=%s,cooldev9=%s\n",
 		interval=time_msec / 1000;
 
 		mtktscpu_dprintk("[mtktscpu_write] trip_0_temp=%d,trip_1_temp=%d,trip_2_temp=%d,trip_3_temp=%d,trip_4_temp=%d,\
-trip_5_temp=%d,trip_6_temp=%d,trip_7_temp=%d,trip_8_temp=%d,trip_9_temp=%d,time_ms=%d, num_trip=%d\n", 
+trip_5_temp=%d,trip_6_temp=%d,trip_7_temp=%d,trip_8_temp=%d,trip_9_temp=%d,time_ms=%d, num_trip=%d\n",
 				trip_temp[0],trip_temp[1],trip_temp[2],trip_temp[3],trip_temp[4],
 				trip_temp[5],trip_temp[6],trip_temp[7],trip_temp[8],trip_temp[9],interval*1000, num_trip);
 
@@ -1432,7 +1464,7 @@ int mtktscpu_register_DVFS_hotplug_cooler(void)
 	}
 	cl_dev_sysrst = mtk_thermal_cooling_device_register("mtktscpu-sysrst", NULL,
 					&mtktscpu_cooling_sysrst_ops);
-		
+
 	return 0;
 }
 int mtktscpu_register_thermal(void)
@@ -1454,7 +1486,7 @@ void mtktscpu_unregister_DVFS_hotplug_cooler(void)
 		{
 			mtk_thermal_cooling_device_unregister(cl_dev[i]);
 			cl_dev[i] = NULL;
-		}	
+		}
 	}
 	if(cl_dev_sysrst) {
 		mtk_thermal_cooling_device_unregister(cl_dev_sysrst);
@@ -1471,11 +1503,11 @@ void mtktscpu_unregister_thermal(void)
 	}
 }
 
-static int mtk_thermal_suspend(struct platform_device *dev, pm_message_t state)	
+static int mtk_thermal_suspend(struct platform_device *dev, pm_message_t state)
 {
 	mtktscpu_dprintk("[mtk_thermal_suspend] \n");
 	mt65xx_reg_sync_writel(DRV_Reg32(TS_CON0) | 0x000000C0, TS_CON0); // turn off the sensor buffer to save power
-	
+
 	return 0;
 }
 
@@ -1483,11 +1515,11 @@ static int mtk_thermal_resume(struct platform_device *dev)
 {
 	mtktscpu_dprintk("[mtk_thermal_resume] \n");
 	if(talking_flag==false)
-	{	
+	{
 		thermal_reset_and_initial();
 		set_thermal_ctrl_trigger_SPM(trip_temp[0]);
-	}	
-	
+	}
+
 	return 0;
 }
 
@@ -1522,7 +1554,7 @@ static int __init thermal_late_init(void)
 
 	mt65xx_reg_sync_writel(DRV_Reg32(TS_CON0) | 0x000000C0, TS_CON0); // turn off the sensor buffer to save power
 
-	
+
 	thermal_reset_and_initial();
 //	set_high_low_threshold(20000, 10000);//test
 
@@ -1542,7 +1574,7 @@ static int __init thermal_late_init(void)
 	if(err)
 		goto err_unreg;
 
-	err= request_irq(MT_PTP_THERM_IRQ_ID, thermal_interrupt_handler, IRQF_TRIGGER_LOW, THERMAL_NAME, NULL);	
+	err= request_irq(MT_PTP_THERM_IRQ_ID, thermal_interrupt_handler, IRQF_TRIGGER_LOW, THERMAL_NAME, NULL);
 	if(err)
 		mtktscpu_dprintk("[mtktscpu_init] IRQ register fail\n");
 
@@ -1581,10 +1613,10 @@ static int __init thermal_late_init(void)
 			entry->write_proc = NULL;
 		}
 	}
-	
+
 //	get_thermal_slope_intercept(&ts);
 //	printk("INIT: ts_MTS=%d, ts_BTS=%d \n", ts.ts_MTS, ts.ts_BTS);
-	
+
 	return 0;
 
 err_unreg:

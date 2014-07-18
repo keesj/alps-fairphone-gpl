@@ -3045,8 +3045,9 @@ void BAT_thread_bq24158(void)
     int i=0;
     int BAT_status = 0;
     //kal_uint32 tmp32;
+    int ret_val=0;  //tyang
+
 #if !defined(MTK_KERNEL_POWER_OFF_CHARGING)	
-    int ret_val=0;
 
     if(boot_check_once==1)
     {

@@ -1192,7 +1192,6 @@ UINT32 BattVoltToPercent(UINT16 dwVoltage)
     UINT32 m = 0;
     UINT32 VBAT1 = 0, VBAT2 = 0;
     UINT32 bPercntResult = 0, bPercnt1 = 0, bPercnt2 = 0;
-    
     //if (Enable_BATDRV_LOG == 1) {
     //    printf("###### 100 <-> voltage : %d ######\r\n", Batt_VoltToPercent_Table[10].BattVolt);
     //}
@@ -1428,7 +1427,7 @@ int BAT_CheckBatteryStatus_bq24158(void)
 
 #if 1        
         /* LK charging LED */
-        if ( (bat_volt_check_point >= 90)  || (user_view_flag == KAL_TRUE) ) {
+        if ( (bat_volt_check_point >= 98)  || (user_view_flag == KAL_TRUE) ) {   //modify by lxingyong 
             leds_battery_full_charging();
         } else if(bat_volt_check_point <= 10) {
             leds_battery_low_charging();
@@ -1994,7 +1993,7 @@ void check_point_sync_leds(void)
     int battery_level = BattVoltToPercent(BMT_status.bat_vol);
     printf("[BATTERY] %s  battery_level = %d \n", __func__, battery_level);
 
-    if(battery_level >= 90)    //Full ARGB
+    if(battery_level >= 98)    //Full ARGB   //modify by lxingyong
     {
         leds_battery_full_charging();
     }

@@ -6,6 +6,9 @@
 #include "AudioUtility.h"
 
 #include "SpeechDriverFactory.h"
+#include "AudioMTKStreamIn.h"
+
+#include <linux/rtpm_prio.h>
 
 #ifdef MTK_AUDIO_HD_REC_SUPPORT
 #include "AudioCustParam.h"
@@ -48,6 +51,15 @@ extern "C" {
 
 namespace android
 {
+
+#define ASSERT_FTRACE(exp) \
+    do { \
+        if (!(exp)) { \
+            ALOGE("ASSERT_FTRACE("#exp") fail: \""  __FILE__ "\", %uL", __LINE__); \
+            aee_system_exception("libaudio.primary.default.so", NULL, DB_OPT_FTRACE, "AudioMTkRecordThread is block?"); \
+        } \
+    } while(0)
+    
 
 AudioMTKStreamInManager *AudioMTKStreamInManager::UniqueStreamInManagerInstance = NULL;
 int AudioMTKStreamInManager::AudioMTkRecordThread::DumpFileNum =0;
@@ -153,7 +165,9 @@ AudioMTKStreamInManager::AudioMTKStreamInManager()
     mIncallRingBuffer.pWrite = mIncallRingBuffer.pBufBase ;
     mMicMute = false;
     mMuteTransition = false;
-    
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+    mBackUpRecordDropTime = AUDIO_RECORD_DROP_MS;
+#endif
     FysncFlag = false;
 
     PreLoadHDRecParams();
@@ -182,6 +196,87 @@ void AudioMTKStreamInManager::PreLoadHDRecParams(void)
 #endif
 }
 
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+timespec AudioMTKStreamInManager::GetSystemTime(bool print)
+{
+    struct timespec systemtime;
+    int rc;
+    rc = clock_gettime(CLOCK_MONOTONIC, &systemtime);
+    if (rc != 0) {        
+        systemtime.tv_sec  = 0;
+        systemtime.tv_nsec = 0;        
+        ALOGD("clock_gettime error");
+    }
+    if(print==true)    
+        ALOGD("GetSystemTime, sec %ld nsec %ld", systemtime.tv_sec, systemtime.tv_nsec);
+    
+    return systemtime;
+}
+
+unsigned long long AudioMTKStreamInManager::ProcessTimeCheck(struct timespec StartTime, struct timespec EndTime)
+{
+    unsigned long long diffns = 0;
+    int thresholdms = 40;
+    struct timespec tstemp1 = StartTime;
+    struct timespec tstemp2 = EndTime;        
+                        
+    if(tstemp1.tv_sec > tstemp2.tv_sec)
+    {
+        if(tstemp1.tv_nsec >= tstemp2.tv_nsec)
+        {
+            diffns = ((tstemp1.tv_sec - tstemp2.tv_sec)*1000000000) + tstemp1.tv_nsec-tstemp2.tv_nsec;
+        }
+        else
+        {
+            diffns = ((tstemp1.tv_sec-tstemp2.tv_sec-1)*1000000000) + tstemp1.tv_nsec + 1000000000 -tstemp2.tv_nsec;
+        }
+    }
+    else if(tstemp1.tv_sec == tstemp2.tv_sec)
+    {
+        if(tstemp1.tv_nsec >= tstemp2.tv_nsec)
+        {
+            diffns = tstemp1.tv_nsec-tstemp2.tv_nsec;
+        }
+        else
+        {
+            diffns = tstemp2.tv_nsec-tstemp1.tv_nsec;
+        }        
+    }
+    else
+    {
+        if(tstemp2.tv_nsec >= tstemp1.tv_nsec)
+        {
+            diffns = ((tstemp2.tv_sec - tstemp1.tv_sec)*1000000000) + tstemp2.tv_nsec-tstemp1.tv_nsec;
+        }
+        else
+        {
+            diffns = ((tstemp2.tv_sec-tstemp1.tv_sec-1)*1000000000) + tstemp2.tv_nsec + 1000000000 -tstemp1.tv_nsec;
+        }
+    }
+/*    
+    if((diffns/1000000)>=thresholdms)
+    {
+        ALOGW("ProcessTimeCheck, process too long? sec %ld nsec %ld, sec %ld nsec %ld", StartTime.tv_sec, StartTime.tv_nsec, EndTime.tv_sec, EndTime.tv_nsec);
+    }*/
+    return diffns;
+
+}
+#endif
+
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+uint32_t AudioMTKStreamInManager::BesRecordProcess(AudioMTKStreamInClient *Client, void *buffer , uint32 copy_size)
+{
+#ifdef MTK_AUDIO_HD_REC_SUPPORT	
+    //ALOGD("BesRecordProcess mEnableBesRecord=%d, copy_size=%d",Client->mEnableBesRecord,copy_size);
+    if(Client->mEnableBesRecord==true)
+    {
+        Client->mStreamIn->BesRecordPreprocess(buffer,copy_size);
+        
+    }
+#endif        
+    return copy_size;
+}
+#endif
 uint32_t AudioMTKStreamInManager::CopyBufferToClient(uint32 mMemDataType, void *buffer , uint32 copy_size)
 {
     /*
@@ -195,9 +290,20 @@ uint32_t AudioMTKStreamInManager::CopyBufferToClient(uint32 mMemDataType, void *
         return 0;
     }
     int FreeSpace = 0;
+    char *tempBuf = new char[copy_size];
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT    
+    struct timespec EnterTime;
+    struct timespec Finishtime;
+    unsigned long long timecheck = 0;
+    EnterTime = GetSystemTime();
+#endif    
     for (int i = 0 ; i < mAudioInput.size() ; i ++) {
         AudioMTKStreamInClient *temp = mAudioInput.valueAt(i) ;
         if (temp->mMemDataType == mMemDataType && true == temp->mEnable) {
+            memcpy(tempBuf, buffer,copy_size*sizeof(char));  
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT            
+            BesRecordProcess(temp,tempBuf,copy_size);
+#endif            
             temp->mLock.lock();
             FreeSpace =  RingBuf_getFreeSpace(&temp->mRingBuf);
             if (FreeSpace >= copy_size) {
@@ -212,7 +318,7 @@ uint32_t AudioMTKStreamInManager::CopyBufferToClient(uint32 mMemDataType, void *
 #endif
                 {
                     //ALOGD("1 RingBuf_copyToLinear FreeSpace = %d temp = %p copy_size = %d mRingBuf = %p", FreeSpace, temp, copy_size, &temp->mRingBuf);
-                    RingBuf_copyFromLinear(&temp->mRingBuf, (char *)buffer, copy_size);
+                    RingBuf_copyFromLinear(&temp->mRingBuf, (char *)tempBuf, copy_size);
                 }
             }
             else {
@@ -224,6 +330,22 @@ uint32_t AudioMTKStreamInManager::CopyBufferToClient(uint32 mMemDataType, void *
             temp->mLock.unlock();
         }
     }
+
+    // free temp data buffer
+    delete[] tempBuf;
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT    
+    Finishtime = GetSystemTime();
+    timecheck = ProcessTimeCheck(EnterTime,Finishtime);
+    if(timecheck>mMaxProcessTime)
+    {
+        mMaxProcessTime = timecheck;
+        ALOGD("CopyBufferToClient, mMaxProcessTime = %lld", mMaxProcessTime);    
+    }
+    if((timecheck/1000000)>=80)
+    {
+        ALOGW("CopyBufferToClient, process too long? sec %ld nsec %ld, sec %ld nsec %ld", EnterTime.tv_sec, EnterTime.tv_nsec, Finishtime.tv_sec, Finishtime.tv_nsec);
+    }
+#endif    
     mAudioResourceManager->DisableAudioLock(AudioResourceManagerInterface::AUDIO_STREAMINMANAGER_LOCK);
     return 0;
 }
@@ -696,8 +818,12 @@ status_t  AudioMTKStreamInManager:: Do_input_start(AudioMTKStreamInClient *Clien
                 }
                 else
                 {
-                    mAudioDigital->SetIrqMcuSampleRate(AudioDigitalType::IRQ2_MCU_MODE, 16000);
+                    mAudioDigital->SetIrqMcuSampleRate(AudioDigitalType::IRQ2_MCU_MODE, 16000);                    
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT                    
+                    mAudioDigital->SetIrqMcuCounter(AudioDigitalType::IRQ2_MCU_MODE, 640); // 40ms
+#else
                     mAudioDigital->SetIrqMcuCounter(AudioDigitalType::IRQ2_MCU_MODE, 800); // 50ms
+#endif
                 }
                 mAudioDigital->SetIrqMcuEnable(AudioDigitalType::IRQ2_MCU_MODE, true);
             }
@@ -777,7 +903,19 @@ void AudioMTKStreamInManager::SetInputMute(bool bEnable)
         mMuteTransition = false;
     }
 }
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+void AudioMTKStreamInManager::BackupRecordDropTime(uint32 droptime)
+{
+    ALOGD("BackupRecordDropTime = %d", droptime);
+    mBackUpRecordDropTime = droptime;
+}
 
+uint32 AudioMTKStreamInManager::GetRecordDropTime()
+{
+    ALOGD("GetRecordDropTime = %d", mBackUpRecordDropTime);
+    return mBackUpRecordDropTime;
+}
+#endif
 static short clamp16(int sample)
 {
     if ((sample>>15) ^ (sample>>31))
@@ -895,6 +1033,31 @@ AudioMTKStreamInManager::AudioMTkRecordThread::AudioMTkRecordThread(AudioMTKStre
     DumpFileNum %= MAX_DUMP_NUM;
     mRingBuffer = RingBuffer;
     mBufferSize = BufferSize;
+
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+    struct sched_param sched_p;
+    sched_getparam(0, &sched_p);
+    sched_p.sched_priority = RTPM_PRIO_AUDIO_RECORD+1;
+    if(0 != sched_setscheduler(0, SCHED_RR, &sched_p))
+    {
+        ALOGE("[%s] failed, errno: %d", __func__, errno);
+    }
+    else
+    {
+        sched_p.sched_priority = RTPM_PRIO_AUDIO_RECORD+1;
+        sched_getparam(0, &sched_p);
+        ALOGD("sched_setscheduler ok, priority: %d", sched_p.sched_priority);
+    }
+
+    mManager->mMaxProcessTime = 0;
+#endif
+
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT   
+    memset(&mEnterTime, 0, sizeof(timespec));
+    memset(&mFinishtime, 0, sizeof(timespec));
+    mStart = false;
+    readperiodtime = 0;
+#endif    
 }
 
 AudioMTKStreamInManager::AudioMTkRecordThread::~AudioMTkRecordThread()
@@ -926,7 +1089,12 @@ void AudioMTKStreamInManager::AudioMTkRecordThread::onFirstRef()
     {
         mRecordDropms =0;
     }
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT    
+    mManager->BackupRecordDropTime(mRecordDropms);
+#endif    
+#ifndef MTK_VOIP_ENHANCEMENT_SUPPORT
     run(mName, ANDROID_PRIORITY_URGENT_AUDIO);
+#endif
 }
 
 // Good place to do one-time initializations
@@ -1044,15 +1212,51 @@ void AudioMTKStreamInManager::AudioMTkRecordThread::DropRecordData()
 bool AudioMTKStreamInManager::AudioMTkRecordThread::threadLoop()
 {
     uint32 Read_Size = 0;
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT
+    unsigned long long timecheck = 0;
+#endif
+
     while (!(exitPending() == true)) {
         //ALOGD("AudioMTkRecordThread threadLoop() read mBufferSize = %d mRingBuffer = %p ", mBufferSize, mRingBuffer);
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT        
+        mEnterTime = mManager->GetSystemTime(false);
+        if(mStart==true)
+        {
+            timecheck = mManager->ProcessTimeCheck(mEnterTime,mFinishtime);
+            if(timecheck>readperiodtime)
+            {
+                readperiodtime = timecheck;
+                ALOGD("AudioMTkRecordThread readperiodtime=%lld",readperiodtime);
+                if((timecheck/1000000)>60)
+                {
+                    ALOGW("AudioMTkRecordThread, readperiodtime too long? sec %ld nsec %ld, sec %ld nsec %ld", mEnterTime.tv_sec, mEnterTime.tv_nsec, mFinishtime.tv_sec, mFinishtime.tv_nsec);
+                }
+                if((timecheck/1000000)>120)
+                {
+                    //ASSERT_FTRACE(0);
+                    ALOGW("AudioMTkRecordThread something wrong?");
+                }
+            }
+        }
+#endif        
         Read_Size = ::read(mFd, mRingBuffer, mBufferSize);
+#ifdef MTK_VOIP_ENHANCEMENT_SUPPORT        
+        mFinishtime = mManager->GetSystemTime(false);
+        timecheck = mManager->ProcessTimeCheck(mFinishtime,mEnterTime);
+        mStart = true;
+        if((timecheck/1000000)>70)
+        {
+            ALOGW("AudioMTkRecordThread, process too long? sec %ld nsec %ld, sec %ld nsec %ld", mEnterTime.tv_sec, mEnterTime.tv_nsec, mFinishtime.tv_sec, mFinishtime.tv_nsec);
+        }
+        //ALOGD("AudioMTkRecordThread read finish");
+#endif        
         WritePcmDumpData();
         mManager->ApplyVolume(mRingBuffer,mBufferSize);
+        
         mManager->CopyBufferToClient(mMemType, (void *)mRingBuffer, mBufferSize);
         return true;
     }
-    ALOGD("threadLoop exit");
+    ALOGD("threadLoop exit");    
     return false;
 }
 
