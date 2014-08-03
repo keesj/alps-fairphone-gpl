@@ -78,7 +78,7 @@ static bool printk_disable_uart = 0;
 
 /* We show everything that is MORE important than this.. */
 #define MINIMUM_CONSOLE_LOGLEVEL 1 /* Minimum loglevel we let people use */
-#define DEFAULT_CONSOLE_LOGLEVEL 6 /* anything MORE serious than KERN_INFO */
+#define DEFAULT_CONSOLE_LOGLEVEL 4 /* anything MORE serious than KERN_INFO */
 
 DECLARE_WAIT_QUEUE_HEAD(log_wait);
 

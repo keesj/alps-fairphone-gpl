@@ -7,8 +7,8 @@
 #define MT65XX_PMIC_RST_KEY	1       //1000	/* Invalid Key */ //tyang
 #define MT_CAMERA_KEY 		10
 
-#define MT65XX_BOOT_MENU_KEY       1   /* KEY_VOLUMEUP */
-#define MT65XX_MENU_SELECT_KEY     MT65XX_BOOT_MENU_KEY   
-#define MT65XX_MENU_OK_KEY         0    /* KEY_VOLUMEDOWN */
+#define MT65XX_BOOT_MENU_KEY       MT65XX_RECOVERY_KEY   /* KEY_VOLUMEUP */
+#define MT65XX_MENU_SELECT_KEY     0//MT65XX_BOOT_MENU_KEY   
+#define MT65XX_MENU_OK_KEY         2    /* KEY_VOLUMEDOWN */
 
 #endif /* __CUST_KEY_H__ */
