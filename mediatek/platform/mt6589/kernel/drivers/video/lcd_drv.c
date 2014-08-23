@@ -88,7 +88,7 @@
 #include <linux/string.h>
 #include <disp_drv_log.h>
 #include <linux/dma-mapping.h>
-#include <disp_drv_platform.h>
+#include "disp_drv_platform.h"
 
 #include <linux/hrtimer.h>
 

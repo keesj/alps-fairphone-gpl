@@ -21,7 +21,7 @@
 #include "ddp_path.h"
 
 #include "disp_drv.h"
-#include <ddp_dpfd.h>
+#include "ddp_dpfd.h"
 #include "../m4u/m4u.h"
 // ---------------------------------------------------------------------------
 //  External variable declarations

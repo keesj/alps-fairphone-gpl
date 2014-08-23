@@ -78,7 +78,7 @@
 #include "ddp_debug.h"
 #include "ddp_color.h"
 #include "ddp_bls.h"
-#include <ddp_dpfd.h>
+#include "ddp_dpfd.h"
 #include "disp_drv.h"
 
 #include "ddp_rot.h"

@@ -23,8 +23,8 @@
 #include <mach/irqs.h>
 //#include <asm/tcm.h> /*MT6577 do not have tcm*/
 
-#include <ddp_drv.h>
-#include <ddp_dpfd.h>
+#include "ddp_drv.h"
+#include "ddp_dpfd.h"
 
 #define DDPKBITBLIT_TIMEOUT     ( 3000 )
 
