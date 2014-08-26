@@ -1,3 +1,4 @@
+
 #ifndef __PARTITION_DEFINE_H__
 #define __PARTITION_DEFINE_H__
 
@@ -23,12 +24,10 @@
 #define PART_SEC_RO "SEC_RO" 
 #define PART_MISC "MISC" 
 #define PART_LOGO "LOGO" 
-#define PART_EBR2 "EBR2" 
 #define PART_EXPDB "EXPDB" 
 #define PART_ANDROID "ANDROID" 
 #define PART_CACHE "CACHE" 
 #define PART_USRDATA "USRDATA" 
-#define PART_FAT "FAT" 
 #define PART_BMTPOOL "BMTPOOL" 
 /*preloader re-name*/
 #define PART_SECURE "SECURE" 
@@ -60,16 +59,14 @@
 #define PART_OFFSET_SEC_RO			(0x3380000)
 #define PART_SIZE_MISC			(512*KB)
 #define PART_SIZE_LOGO			(3072*KB)
-#define PART_SIZE_EBR2			(512*KB)
 #define PART_SIZE_EXPDB			(10240*KB)
 #define PART_SIZE_ANDROID			(665600*KB)
 #define PART_SIZE_CACHE			(129024*KB)
 #define PART_SIZE_USRDATA			(1048576*KB)
-#define PART_SIZE_FAT			(0*KB)
 #define PART_SIZE_BMTPOOL			(0xa8)
 
 
-#define PART_NUM			22
+#define PART_NUM			20
 
 
 
