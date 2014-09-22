@@ -226,11 +226,6 @@ static void init_lcm_registers(void)
 
 unsigned int data_array[16];
 
-data_array[0]=0x00053902;
-	data_array[1]=0xBF0001BC;
-	data_array[2]=0x00000035;
-	dsi_set_cmdq(&data_array, 3, 1);
-
 	data_array[0]=0x00053902;
 	data_array[1]=0x2555AAFF;
 	data_array[2]=0x00000001;
@@ -284,7 +279,7 @@ data_array[0]=0x00243902;
 
 	data_array[0]=0x00043902;
 	data_array[1]=0x0000ECB1;
-	
+
 	dsi_set_cmdq(&data_array, 2, 1);
 
 	data_array[0]=0x00053902;
@@ -335,8 +330,7 @@ data_array[0]=0x00043902;
 	dsi_set_cmdq(&data_array, 2, 1);
 
 	data_array[0]=0x00043902;
-	//data_array[1]=0x101010B8;		//modify @0619
-	data_array[1]=0x202020B8;
+	data_array[1]=0x101010B8;
 	dsi_set_cmdq(&data_array, 2, 1);
 
 	data_array[0]=0x00043902;
@@ -344,16 +338,15 @@ data_array[0]=0x00043902;
 	dsi_set_cmdq(&data_array, 2, 1);
 
 	data_array[0]=0x00043902;
-	//data_array[1]=0x343434BA;		//modify @0619
-	data_array[1]=0x242424BA;
+	data_array[1]=0x343434BA;
 	dsi_set_cmdq(&data_array, 2, 1);
 
 	data_array[0]=0x00043902;
-	data_array[1]=0x00C800BC;
+	data_array[1]=0x008000BC;
 	dsi_set_cmdq(&data_array, 2, 1);
 
 	data_array[0]=0x00043902;
-	data_array[1]=0x00C800BD;
+	data_array[1]=0x008000BD;
 	dsi_set_cmdq(&data_array, 2, 1);
 
 	//data_array[0]=0x51BE1500;//Data Type 
@@ -378,30 +371,30 @@ data_array[0]=0x00053902;
 	
 	data_array[0]=0x00113902;
 	data_array[1]=0x007000D1;
-	data_array[2]=0x01F700CE;
-	data_array[3]=0x01210110;
-	data_array[4]=0x01620144;
-	data_array[5]=0x0000008D;
+	data_array[2]=0x009F0080;
+	data_array[3]=0x01D900BE;
+	data_array[4]=0x01210107;
+	data_array[5]=0x00000045;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00113902;
-	data_array[1]=0x01AF01D2;
-	data_array[2]=0x020C02E4;
-	data_array[3]=0x0282024D;
-	data_array[4]=0x02B80284;
-	data_array[5]=0x000000F0;
+	data_array[1]=0x016601D2;
+	data_array[2]=0x02C4019A;
+	data_array[3]=0x02420208;
+	data_array[4]=0x027B0244;
+	data_array[5]=0x000000BC;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00113902;
-	data_array[1]=0x031403D3;
-	data_array[2]=0x035E0342;
-	data_array[3]=0x03970380;
-	data_array[4]=0x03C003B0;
-	data_array[5]=0x000000DF;
+	data_array[1]=0x03E702D3;
+	data_array[2]=0x033C031B;
+	data_array[3]=0x037E0366;
+	data_array[4]=0x03B1039F;
+	data_array[5]=0x000000CF;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00053902;
-	data_array[1]=0x03FD03D4;
+	data_array[1]=0x03F303D4;
 	data_array[2]=0x000000FF;
 	dsi_set_cmdq(&data_array, 3, 1);
 	//GAMMA SETTING end
@@ -409,62 +402,61 @@ data_array[0]=0x00053902;
 	//GAMMA SETTING start
 	data_array[0]=0x00113902;
 	data_array[1]=0x007000D5;
-	data_array[2]=0x01F700CE;
-	data_array[3]=0x01210110;
-	data_array[4]=0x01620144;
-	data_array[5]=0x0000008D;
+	data_array[2]=0x009F0080;
+	data_array[3]=0x01D900BE;
+	data_array[4]=0x01210107;
+	data_array[5]=0x00000045;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00113902;
-	data_array[1]=0x01AF01D6;
-	data_array[2]=0x020C02E4;
-	data_array[3]=0x0282024D;
-	data_array[4]=0x02B80284;
-	data_array[5]=0x000000F0;
+	data_array[1]=0x016601D6;
+	data_array[2]=0x02C4019A;
+	data_array[3]=0x02420208;
+	data_array[4]=0x027B0244;
+	data_array[5]=0x000000BC;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00113902;
-	data_array[1]=0x031403D7;
-	data_array[2]=0x035E0342;
-	data_array[3]=0x03970380;
-	data_array[4]=0x03C003B0;
-	data_array[5]=0x000000DF;
+	data_array[1]=0x03E702D7;
+	data_array[2]=0x033C031B;
+	data_array[3]=0x037E0366;
+	data_array[4]=0x03B1039F;
+	data_array[5]=0x000000CF;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00053902;
-	data_array[1]=0x03FD03D8;
+	data_array[1]=0x03F303D8;
 	data_array[2]=0x000000FF;
 	dsi_set_cmdq(&data_array, 3, 1);
 
 	//GAMMA SETTING start
 	
-	
 	data_array[0]=0x00113902;
 	data_array[1]=0x007000D9;
-	data_array[2]=0x01F700CE;
-	data_array[3]=0x01210110;
-	data_array[4]=0x01620144;
-	data_array[5]=0x0000008D;
+	data_array[2]=0x009F0080;
+	data_array[3]=0x01D900BE;
+	data_array[4]=0x01210107;
+	data_array[5]=0x00000045;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00113902;
-	data_array[1]=0x01AF01DD;
-	data_array[2]=0x020C02E4;
-	data_array[3]=0x0282024D;
-	data_array[4]=0x02B80284;
-	data_array[5]=0x000000F0;
+	data_array[1]=0x016601DD;
+	data_array[2]=0x02C4019A;
+	data_array[3]=0x02420208;
+	data_array[4]=0x027B0244;
+	data_array[5]=0x000000BC;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00113902;
-	data_array[1]=0x031403DE;
-	data_array[2]=0x035E0342;
-	data_array[3]=0x03970380;
-	data_array[4]=0x03C003B0;
-	data_array[5]=0x000000DF;
+	data_array[1]=0x03E702DE;
+	data_array[2]=0x033C031B;
+	data_array[3]=0x037E0366;
+	data_array[4]=0x03B1039F;
+	data_array[5]=0x000000CF;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00053902;
-	data_array[1]=0x03FD03DF;
+	data_array[1]=0x03F303DF;
 	data_array[2]=0x000000FF;
 	dsi_set_cmdq(&data_array, 3, 1);
 
@@ -473,30 +465,30 @@ data_array[0]=0x00053902;
 	
 	data_array[0]=0x00113902;
 	data_array[1]=0x007000E0;
-	data_array[2]=0x01F700CE;
-	data_array[3]=0x01210110;
-	data_array[4]=0x01620144;
-	data_array[5]=0x0000008D;
+	data_array[2]=0x009F0080;
+	data_array[3]=0x01D900BE;
+	data_array[4]=0x01210107;
+	data_array[5]=0x00000045;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00113902;
-	data_array[1]=0x01AF01E1;
-	data_array[2]=0x020C02E4;
-	data_array[3]=0x0282024D;
-	data_array[4]=0x02B80284;
-	data_array[5]=0x000000F0;
+	data_array[1]=0x016601E1;
+	data_array[2]=0x02C4019A;
+	data_array[3]=0x02420208;
+	data_array[4]=0x027B0244;
+	data_array[5]=0x000000BC;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00113902;
-	data_array[1]=0x031403E2;
-	data_array[2]=0x035E0342;
-	data_array[3]=0x03970380;
-	data_array[4]=0x03C003B0;
-	data_array[5]=0x000000DF;
+	data_array[1]=0x03E702E2;
+	data_array[2]=0x033C031B;
+	data_array[3]=0x037E0366;
+	data_array[4]=0x03B1039F;
+	data_array[5]=0x000000CF;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00053902;
-	data_array[1]=0x03FD03E3;
+	data_array[1]=0x03F303E3;
 	data_array[2]=0x000000FF;
 	dsi_set_cmdq(&data_array, 3, 1);
 	//GAMMA SETTING end
@@ -506,30 +498,30 @@ data_array[0]=0x00053902;
 	
 	data_array[0]=0x00113902;
 	data_array[1]=0x007000E4;
-	data_array[2]=0x01F700CE;
-	data_array[3]=0x01210110;
-	data_array[4]=0x01620144;
-	data_array[5]=0x0000008D;
+	data_array[2]=0x009F0080;
+	data_array[3]=0x01D900BE;
+	data_array[4]=0x01210107;
+	data_array[5]=0x00000045;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00113902;
-	data_array[1]=0x01AF01E5;
-	data_array[2]=0x020C02E4;
-	data_array[3]=0x0282024D;
-	data_array[4]=0x02B80284;
-	data_array[5]=0x000000F0;
+	data_array[1]=0x016601E5;
+	data_array[2]=0x02C4019A;
+	data_array[3]=0x02420208;
+	data_array[4]=0x027B0244;
+	data_array[5]=0x000000BC;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00113902;
-	data_array[1]=0x031403E6;
-	data_array[2]=0x035E0342;
-	data_array[3]=0x03970380;
-	data_array[4]=0x03C003B0;
-	data_array[5]=0x000000DF;
+	data_array[1]=0x03E702E6;
+	data_array[2]=0x033C031B;
+	data_array[3]=0x037E0366;
+	data_array[4]=0x03B1039F;
+	data_array[5]=0x000000CF;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00053902;
-	data_array[1]=0x03FD03E7;
+	data_array[1]=0x03F303E7;
 	data_array[2]=0x000000FF;
 	dsi_set_cmdq(&data_array, 3, 1);
 	//GAMMA SETTING end
@@ -539,30 +531,30 @@ data_array[0]=0x00053902;
 	
 	data_array[0]=0x00113902;
 	data_array[1]=0x007000E8;
-	data_array[2]=0x01F700CE;
-	data_array[3]=0x01210110;
-	data_array[4]=0x01620144;
-	data_array[5]=0x0000008D;
+	data_array[2]=0x009F0080;
+	data_array[3]=0x01D900BE;
+	data_array[4]=0x01210107;
+	data_array[5]=0x00000045;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00113902;
-	data_array[1]=0x01AF01E9;
-	data_array[2]=0x020C02E4;
-	data_array[3]=0x0282024D;
-	data_array[4]=0x02B80284;
-	data_array[5]=0x000000F0;
+	data_array[1]=0x016601E9;
+	data_array[2]=0x02C4019A;
+	data_array[3]=0x02420208;
+	data_array[4]=0x027B0244;
+	data_array[5]=0x000000BC;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00113902;
-	data_array[1]=0x031403EA;
-	data_array[2]=0x035E0342;
-	data_array[3]=0x03970380;
-	data_array[4]=0x03C003B0;
-	data_array[5]=0x000000DF;
+	data_array[1]=0x03E702EA;
+	data_array[2]=0x033C031B;
+	data_array[3]=0x037E0366;
+	data_array[4]=0x03B1039F;
+	data_array[5]=0x000000CF;
 	dsi_set_cmdq(&data_array, 6, 1);
 
 	data_array[0]=0x00053902;
-	data_array[1]=0x03FD03EB;
+	data_array[1]=0x03F303EB;
 	data_array[2]=0x000000FF;
 	dsi_set_cmdq(&data_array, 3, 1);
 	//GAMMA SETTING end
@@ -916,3 +908,4 @@ LCM_DRIVER nt35516_qhd_dsi_cmd_lcm_drv =
 		.check_status = lcm_check_status
 
     };
+
