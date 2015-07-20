@@ -3321,6 +3321,7 @@ wlanImageSectionDownloadStatus (
     do {
         if(kalIsCardRemoved(prAdapter->prGlueInfo) == TRUE
                 || fgIsBusAccessFailed == TRUE) {
+            DBGLOG(INIT, ERROR,("kalIsCardRemoved(prAdapter->prGlueInfo)\n"));
             u4Status = WLAN_STATUS_FAILURE;
         }
         else if(nicRxWaitResponse(prAdapter,
@@ -3328,6 +3329,7 @@ wlanImageSectionDownloadStatus (
                     aucBuffer,
                     sizeof(INIT_HIF_RX_HEADER_T) + sizeof(INIT_EVENT_CMD_RESULT),
                     &u4RxPktLength) != WLAN_STATUS_SUCCESS) {
+            DBGLOG(INIT, ERROR,("nicRxWaitResponse(prAdapter\n"));
             u4Status = WLAN_STATUS_FAILURE;
         }
         else {
@@ -3335,14 +3337,17 @@ wlanImageSectionDownloadStatus (
 
             // EID / SeqNum check
             if(prInitHifRxHeader->rInitWifiEvent.ucEID != INIT_EVENT_ID_CMD_RESULT) {
+                DBGLOG(INIT, ERROR,("prInitHifRxHeader->rInitWifiEvent.ucEID != INIT_EVENT_ID_CMD_RESULT\n"));
                 u4Status = WLAN_STATUS_FAILURE;
             }
             else if(prInitHifRxHeader->rInitWifiEvent.ucSeqNum != ucCmdSeqNum) {
+                DBGLOG(INIT, ERROR,("prInitHifRxHeader->rInitWifiEvent.ucSeqNum != ucCmdSeqNum\n"));
                 u4Status = WLAN_STATUS_FAILURE;
             }
             else {
                 prEventCmdResult = (P_INIT_EVENT_CMD_RESULT) (prInitHifRxHeader->rInitWifiEvent.aucBuffer);
                 if(prEventCmdResult->ucStatus != 0) { // 0 for download success
+                    DBGLOG(INIT, ERROR,("prEventCmdResult->ucStatus != 0\n"));
                     u4Status = WLAN_STATUS_FAILURE;
                 }
                 else {
