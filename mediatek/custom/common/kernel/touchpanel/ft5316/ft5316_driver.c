@@ -338,23 +338,16 @@ static  void tpd_down(int x, int y, int p) {
 	 TPD_EM_PRINT(x, y, x, y, p-1, 1);
  }
  
-static  void tpd_up(int x, int y,int *count) {
-	 //if(*count>0) {
-		 //input_report_abs(tpd->dev, ABS_PRESSURE, 0);
-		 input_report_key(tpd->dev, BTN_TOUCH, 0);
-		 input_report_abs(tpd->dev, ABS_MT_TOUCH_MAJOR, 0);
-		 input_report_abs(tpd->dev, ABS_MT_POSITION_X, x);
-		 input_report_abs(tpd->dev, ABS_MT_POSITION_Y, y);
-		 //printk("U[%4d %4d %4d] ", x, y, 0);
-		 input_mt_sync(tpd->dev);
-		 TPD_EM_PRINT(x, y, x, y, 0, 0);
-	//	 (*count)--;
-     if (FACTORY_BOOT == get_boot_mode()|| RECOVERY_BOOT == get_boot_mode())
-     {   
-        tpd_button(x, y, 0); 
-     }   		 
 
- }
+static  void tpd_up(int x, int y,int *count)
+{
+  input_report_key(tpd->dev, BTN_TOUCH, 0);
+  input_mt_sync(tpd->dev);
+  TPD_EM_PRINT(x, y, x, y, 0, 0);
+  if (FACTORY_BOOT == get_boot_mode()|| RECOVERY_BOOT == get_boot_mode()) {
+    tpd_button(x, y, 0);
+  }
+}
 
  static int tpd_touchinfo(struct touch_info *cinfo, struct touch_info *pinfo)
  {
@@ -777,5 +770,3 @@ i2c_smbus_write_i2c_block_data(i2c_client, 0xA5, 1, &data);  //TP enter sleep mo
  
  module_init(tpd_driver_init);
  module_exit(tpd_driver_exit);
-
-

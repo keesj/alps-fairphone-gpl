@@ -173,21 +173,21 @@ static unsigned short hid_keycode[256] = {
 	  KEY_ZENKAKUHANKAKU,
 	  KEY_UNKNOWN,
 	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
-	  KEY_UNKNOWN,
+	  BTN_A,
+	  BTN_B,
+	  BTN_C,
+	  BTN_X,
+	  BTN_Y,
+	  BTN_Z,
+	  BTN_TL,
+	  BTN_TR,
+	  BTN_TL2,
+	  BTN_TR2,
+	  BTN_SELECT,
+	  BTN_START,
+	  BTN_MODE,
+	  BTN_THUMBL,
+	  BTN_THUMBR,
 	  KEY_UNKNOWN,
 	  KEY_UNKNOWN,
 	  KEY_UNKNOWN,
@@ -289,6 +289,19 @@ static unsigned short hid_keycode[256] = {
 #define HID_WHEEL	5
 #define HID_KEYBOARD	6
 #define HID_MOUSE	7
+#define HID_GAMEPAD	8
+#define HID_ABS_X	9
+#define HID_ABS_Y	10
+#define HID_ABS_Z	11
+#define HID_ABS_RX	12
+#define HID_ABS_RY	13
+#define HID_ABS_RZ	14
+#define HID_ABS_HAT		15
+
+
+#define HID_MOUSE_INDEX	0
+#define HID_GAMEPAD_INDEX	151
+
 
 static struct input_dev *hid_input_dev;
 
@@ -296,6 +309,12 @@ struct hidkeyboard {
     struct input_dev *input;
     unsigned short keymap[ARRAY_SIZE(hid_keycode)];
 };
+
+static struct {
+	__s32 x;
+	__s32 y;
+} hid_hat_to_axis[16] = {{ 0,-1}, { 1,-1}, { 1, 0}, { 1, 1}, { 0, 1}, {-1, 1}, {-1, 0}, {-1,-1}};
+
 
 struct hidkeyboard *hidkbd;
 int registered = 0;
@@ -330,7 +349,22 @@ static long hid_kbd_dev_ioctl(struct file *file, unsigned int cmd, unsigned long
 		case HID_MOUSE:
 		{		
 			hid_input_dev->keycodemax = 4;
-			for (i = 0; i < hid_input_dev->keycodemax; i++)
+			for (i = HID_MOUSE_INDEX; i < hid_input_dev->keycodemax; i++)
+				__set_bit(hidkbd->keymap[i], hid_input_dev->keybit);
+			err = input_register_device(hid_input_dev);
+			if (err) 
+			{
+				xlog_printk(ANDROID_LOG_ERROR,HID_SAY,"register input device failed (%d)\n", err);
+				input_free_device(hid_input_dev);
+				return err;
+			}
+			registered = 1;
+			break;
+		}
+		case HID_GAMEPAD:
+		{		
+			hid_input_dev->keycodemax = 15;
+			for (i = HID_GAMEPAD_INDEX; i < hid_input_dev->keycodemax; i++)
 				__set_bit(hidkbd->keymap[i], hid_input_dev->keybit);
 			err = input_register_device(hid_input_dev);
 			if (err) 
@@ -392,6 +426,70 @@ static long hid_kbd_dev_ioctl(struct file *file, unsigned int cmd, unsigned long
 			input_sync(hid_input_dev);
 			break;
 		}
+		case HID_ABS_X:
+		{
+			if (copy_from_user(&value, uarg, sizeof(value)))
+				return -EFAULT;
+			xlog_printk(ANDROID_LOG_DEBUG,HID_SAY,"hid HID_ABS_X %d \n",value);
+			input_report_abs(hid_input_dev, ABS_X, value);
+			input_sync(hid_input_dev);
+			break;
+		}
+		case HID_ABS_Y:
+		{
+			if (copy_from_user(&value, uarg, sizeof(value)))
+				return -EFAULT;
+			xlog_printk(ANDROID_LOG_DEBUG,HID_SAY,"hid HID_ABS_Y %d \n",value);
+			input_report_abs(hid_input_dev, ABS_Y, value);
+			input_sync(hid_input_dev);
+			break;
+		}
+		case HID_ABS_Z:
+		{
+			if (copy_from_user(&value, uarg, sizeof(value)))
+				return -EFAULT;
+			xlog_printk(ANDROID_LOG_DEBUG,HID_SAY,"hid HID_ABS_Z %d \n",value);
+			input_report_abs(hid_input_dev, ABS_Z, value);
+			input_sync(hid_input_dev);
+			break;
+		}
+		case HID_ABS_RX:
+		{
+			if (copy_from_user(&value, uarg, sizeof(value)))
+				return -EFAULT;
+			xlog_printk(ANDROID_LOG_DEBUG,HID_SAY,"hid HID_ABS_RX %d \n",value);
+			input_report_abs(hid_input_dev, ABS_RX, value);
+			input_sync(hid_input_dev);
+			break;
+		}
+		case HID_ABS_RY:
+		{
+			if (copy_from_user(&value, uarg, sizeof(value)))
+				return -EFAULT;
+			xlog_printk(ANDROID_LOG_DEBUG,HID_SAY,"hid HID_ABS_RY %d \n",value);
+			input_report_abs(hid_input_dev, ABS_RY, value);
+			input_sync(hid_input_dev);
+			break;
+		}
+		case HID_ABS_RZ:
+		{
+			if (copy_from_user(&value, uarg, sizeof(value)))
+				return -EFAULT;
+			xlog_printk(ANDROID_LOG_DEBUG,HID_SAY,"hid HID_ABS_RZ %d \n",value);
+			input_report_abs(hid_input_dev, ABS_RZ, value);
+			input_sync(hid_input_dev);
+			break;
+		}
+		case HID_ABS_HAT:
+		{
+			if (copy_from_user(&value, uarg, sizeof(value)))
+				return -EFAULT;
+			xlog_printk(ANDROID_LOG_DEBUG,HID_SAY,"hid HID_ABS_HAT %d (%d,%d)\n",value,hid_hat_to_axis[value].x,hid_hat_to_axis[value].y);
+			input_report_abs(hid_input_dev, ABS_HAT0X, hid_hat_to_axis[value].x);
+			input_report_abs(hid_input_dev, ABS_HAT0Y, hid_hat_to_axis[value].y);
+			input_sync(hid_input_dev);
+			break;
+		}
 		default:
 			return -EINVAL;
 	}
@@ -401,7 +499,7 @@ static long hid_kbd_dev_ioctl(struct file *file, unsigned int cmd, unsigned long
 static int hid_kbd_dev_open(struct inode *inode, struct file *file)
 {
 
-	//int err,i;
+	int i;
 	xlog_printk(ANDROID_LOG_INFO,HID_SAY,"*** hidkeyboard hid_kbd_dev_open ***\n");
 
 	hidkbd = kzalloc(sizeof(struct hidkeyboard), GFP_KERNEL);
@@ -414,14 +512,25 @@ static int hid_kbd_dev_open(struct inode *inode, struct file *file)
 	hidkbd->input = hid_input_dev;
 
 	//__set_bit(EV_KEY, hid_input_dev->evbit);
-	hid_input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_REL);
+	hid_input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_REL) | BIT_MASK(EV_ABS);
 	hid_input_dev->relbit[0] = BIT_MASK(REL_X) | BIT_MASK(REL_Y) | BIT_MASK(REL_WHEEL);
+	hid_input_dev->absbit[0] = BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) 
+		| BIT_MASK(ABS_Z) | BIT_MASK(ABS_RX) 
+		| BIT_MASK(ABS_RY) | BIT_MASK(ABS_RZ)		
+		| BIT_MASK(ABS_HAT0X) | BIT_MASK(ABS_HAT0Y);
 
 	hid_input_dev->name = HID_KBD_NAME;
 	hid_input_dev->keycode = hidkbd->keymap;
 	hid_input_dev->keycodesize = sizeof(unsigned short);
 	//hid_input_dev->keycodemax = ARRAY_SIZE(hid_keycode);
 	hid_input_dev->id.bustype = BUS_HOST;
+
+	for(i = 0; i < 6; i++)
+		input_set_abs_params(hid_input_dev, ABS_X + i,
+				     -128, 127, 0, 0);
+	for(i = 0; i < 2; i++)
+		input_set_abs_params(hid_input_dev, ABS_HAT0X + i,
+				     -1, 1, 0, 0);
 /*
 	for (i = 0; i < ARRAY_SIZE(hidkbd->keymap); i++)
 		__set_bit(hidkbd->keymap[i], hid_input_dev->keybit);
